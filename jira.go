@@ -31,6 +31,11 @@ const (
 	sprintDetailsEndpoint = "/rest/greenhopper/1.0/rapid/charts/sprintreport?rapidViewId=%d&sprintId=%d"
 )
 
+func JiraWithConfig(configFile string) *Jira {
+	config := LoadConfig(configFile)
+	return NewJira(config.BaseUrl, config.Login, config.Password)
+}
+
 func NewJira(baseUrl, login, password string) *Jira {
 	jira := &Jira{
 		BaseUrl: baseUrl,
@@ -59,7 +64,7 @@ func (jr *Jira) FetchSprintDetails(rapidViewId, sprintId int) (sprintDetails *Sp
 }
 
 func (jr *Jira) FetchIssues(keys []string) (searchResult *SearchResult) {
-	jql := fmt.Sprintf("parent in (%s)", strings.Join(keys, ","))
+	jql := fmt.Sprintf("key in (%s) OR parent in (%[1]s)", strings.Join(keys, ","))
 	return jr.SearchIssues(jql, "id", "changelog")
 }
 
@@ -74,13 +79,25 @@ func (jr *Jira) SearchIssues(jql, fields, expand string) (searchResult *SearchRe
 
 func (jr *Jira) fetchJson(endpointUrl string, object interface{}) {
 	req, _ := http.NewRequest("GET", jr.BaseUrl+endpointUrl, nil)
+
 	req.SetBasicAuth(jr.Auth.login, jr.Auth.password)
 
 	resp, _ := jr.client.Do(req)
 
 	if jr.DumpResults {
-		bytes, _ := httputil.DumpResponse(resp, true)
-		ioutil.WriteFile("file"+time.Now().String()+".out", bytes, 0777)
+		file_postfix := time.Now().String()
+
+		bytes, _ := httputil.DumpResponse(resp, false)
+
+		ioutil.WriteFile(file_postfix+".resp", bytes, 0777)
+
+		bytes, _ = httputil.DumpRequest(req, false)
+
+		ioutil.WriteFile(file_postfix+".req", bytes, 0777)
+
+		bytes, _ = ioutil.ReadAll(resp.Body)
+
+		ioutil.WriteFile(file_postfix+".body", bytes, 0777)
 	}
 
 	dec := json.NewDecoder(resp.Body)

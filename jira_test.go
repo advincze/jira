@@ -5,12 +5,10 @@ import (
 	"testing"
 )
 
-var jiraClient *Jira
+var jiraClient = JiraWithConfig("test.yaml")
 
 func init() {
-	config := LoadConfig("test.yaml")
-	jiraClient = NewJira(config.BaseUrl, config.Login, config.Password)
-	// jiraClient.DumpResults = true
+	jiraClient.DumpResults = false
 }
 
 func TestFetchRapidViews(t *testing.T) {
@@ -48,7 +46,6 @@ func TestSearch(t *testing.T) {
 	for _, Issue := range sprintDetails.Contents.IncompletedIssues {
 		keys = append(keys, Issue.Key)
 	}
-
 	issues := jiraClient.FetchIssues(keys)
 
 	for _, issue := range issues.Issues {
@@ -56,5 +53,5 @@ func TestSearch(t *testing.T) {
 			fmt.Println(issue.Key, issue.Fields.Summary, item.Field, item.FromString, item.ToString)
 		}
 	}
-	t.Error("")
+
 }
