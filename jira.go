@@ -43,27 +43,27 @@ func NewJira(baseUrl, login, password string) *Jira {
 	return jira
 }
 
-func (jr *Jira) fetchViews() (rapidViews *RapidViews) {
+func (jr *Jira) FetchViews() (rapidViews *RapidViews) {
 	jr.fetchJson(rapidViewsEndpoint, &rapidViews)
 	return
 }
 
-func (jr *Jira) fetchSprints(rapidViewId int) (sprints *Sprints) {
+func (jr *Jira) FetchSprints(rapidViewId int) (sprints *Sprints) {
 	jr.fetchJson(fmt.Sprintf(sprintsEndpoint, rapidViewId), &sprints)
 	return
 }
 
-func (jr *Jira) fetchSprintDetails(rapidViewId, sprintId int) (sprintDetails *SprintDetails) {
+func (jr *Jira) FetchSprintDetails(rapidViewId, sprintId int) (sprintDetails *SprintDetails) {
 	jr.fetchJson(fmt.Sprintf(sprintDetailsEndpoint, rapidViewId, sprintId), &sprintDetails)
 	return
 }
 
-func (jr *Jira) fetchIssues(keys []string) (searchResult interface{}) {
-	jql := fmt.Sprintf("key in (%s)", strings.Join(keys, ","))
-	return jr.SearchIssues(jql, "*navigable", "")
+func (jr *Jira) FetchIssues(keys []string) (searchResult *SearchResult) {
+	jql := fmt.Sprintf("parent in (%s)", strings.Join(keys, ","))
+	return jr.SearchIssues(jql, "id", "changelog")
 }
 
-func (jr *Jira) SearchIssues(jql, fields, expand string) (searchResult interface{}) {
+func (jr *Jira) SearchIssues(jql, fields, expand string) (searchResult *SearchResult) {
 	val := url.Values{}
 	val.Set("jql", jql)
 	val.Set("fields", fields)
@@ -80,7 +80,6 @@ func (jr *Jira) fetchJson(endpointUrl string, object interface{}) {
 
 	if jr.DumpResults {
 		bytes, _ := httputil.DumpResponse(resp, true)
-
 		ioutil.WriteFile("file"+time.Now().String()+".out", bytes, 0777)
 	}
 
@@ -90,7 +89,7 @@ func (jr *Jira) fetchJson(endpointUrl string, object interface{}) {
 }
 
 type RapidViews struct {
-	Views []RapidView
+	Views []*RapidView
 }
 
 type RapidView struct {
@@ -102,7 +101,7 @@ type RapidView struct {
 
 type Sprints struct {
 	RapidViewId int
-	Sprints     []Sprint
+	Sprints     []*Sprint
 }
 
 type Sprint struct {
@@ -115,9 +114,9 @@ type Sprint struct {
 
 type SprintDetails struct {
 	Contents struct {
-		CompletedIssues   []Issue
-		IncompletedIssues []Issue
-		PuntedIssues      []Issue
+		CompletedIssues   []*Issue
+		IncompletedIssues []*Issue
+		PuntedIssues      []*Issue
 	}
 	Sprint Sprint
 }
@@ -127,10 +126,56 @@ type Issue struct {
 	Key        string
 	StatusId   string
 	StatusName string
-	fields     struct {
+	Expand     string
+	Fields     *IssueFields
+	Changelog  *Changelog
+}
+
+type Changelog struct {
+	StartAt   int
+	Histories *History
+}
+
+type History struct {
+	Id    int
+	Items []*HistoryItem
+}
+
+type HistoryItem struct {
+	Field      string
+	FromString string
+	ToString   string
+}
+
+type IssueFields struct {
+	Summary     string
+	Description string
+	Updated     string
+	Created     string
+	status      struct {
+		Name string
 	}
+	Issuetype *IssueType
+	Priority  struct {
+		Name string
+	}
+	Subtasks              []*Issue
+	Aggregatetimeestimate int
+}
+
+type IssueType struct {
+	Self        string
+	Id          string
+	Description string
+	IconUrl     string
+	Name        string
+	Subtask     bool
 }
 
 type SearchResult struct {
-	Issues []Issue
+	Expand     string
+	StartAt    int
+	MaxResults int
+	Total      int
+	Issues     []*Issue
 }

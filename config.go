@@ -11,7 +11,7 @@ type Config struct {
 	Password string
 }
 
-func loadConfig(fileName string) (config *Config) {
+func LoadConfig(fileName string) (config *Config) {
 
 	file, err := ioutil.ReadFile(fileName)
 	panicerr(err)
