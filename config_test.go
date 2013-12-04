@@ -17,5 +17,5 @@ func TestWriteConfig(t *testing.T) {
 	config.Login = "rob"
 	config.Password = "passwd1"
 
-	config.writeConfig("jiratest.yaml")
+	config.writeConfig("jira.yaml")
 }

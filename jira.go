@@ -12,9 +12,10 @@ import (
 )
 
 type Jira struct {
-	BaseUrl string
-	Auth    *Auth
-	client  *http.Client
+	BaseUrl     string
+	Auth        *Auth
+	client      *http.Client
+	DumpResults bool
 }
 
 type Auth struct {
@@ -42,24 +43,23 @@ func NewJira(baseUrl, login, password string) *Jira {
 	return jira
 }
 
-func (jr *Jira) fetchViews() (rapidViews RapidViews) {
+func (jr *Jira) fetchViews() (rapidViews *RapidViews) {
 	jr.fetchJson(rapidViewsEndpoint, &rapidViews)
 	return
 }
 
-func (jr *Jira) fetchSprints(rapidViewId int) (sprints Sprints) {
+func (jr *Jira) fetchSprints(rapidViewId int) (sprints *Sprints) {
 	jr.fetchJson(fmt.Sprintf(sprintsEndpoint, rapidViewId), &sprints)
 	return
 }
 
-func (jr *Jira) fetchSprintDetails(rapidViewId, sprintId int) (sprintDetails SprintDetails) {
+func (jr *Jira) fetchSprintDetails(rapidViewId, sprintId int) (sprintDetails *SprintDetails) {
 	jr.fetchJson(fmt.Sprintf(sprintDetailsEndpoint, rapidViewId, sprintId), &sprintDetails)
 	return
 }
 
 func (jr *Jira) fetchIssues(keys []string) (searchResult interface{}) {
 	jql := fmt.Sprintf("key in (%s)", strings.Join(keys, ","))
-	println(jql)
 	return jr.SearchIssues(jql, "*navigable", "")
 }
 
@@ -78,10 +78,11 @@ func (jr *Jira) fetchJson(endpointUrl string, object interface{}) {
 
 	resp, _ := jr.client.Do(req)
 
-	bytes, _ := httputil.DumpResponse(resp, true)
-	fmt.Println("bytes", string(bytes))
+	if jr.DumpResults {
+		bytes, _ := httputil.DumpResponse(resp, true)
 
-	ioutil.WriteFile("file"+time.Now().String()+".out", bytes, 0777)
+		ioutil.WriteFile("file"+time.Now().String()+".out", bytes, 0777)
+	}
 
 	dec := json.NewDecoder(resp.Body)
 

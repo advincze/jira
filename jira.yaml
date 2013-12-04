@@ -1,4 +1,3 @@
-
-baseurl: abc
-login: hello
-password: World
+baseurl: http://google.com
+login: rob
+password: passwd1
