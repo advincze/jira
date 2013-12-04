@@ -7,9 +7,9 @@ import (
 
 func main() {
 
-	config := jira.LoadConfig("test.yaml")
+	config := jira.LoadConfig("../test.yaml")
 	jiraClient := jira.NewJira(config.BaseUrl, config.Login, config.Password)
-	jiraClient.DumpResults = true
+	// jiraClient.DumpResults = true
 
 	sprintDetails := jiraClient.FetchSprintDetails(51, 217)
 
