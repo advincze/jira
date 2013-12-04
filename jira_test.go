@@ -10,7 +10,7 @@ var jiraClient *Jira
 func init() {
 	config := LoadConfig("test.yaml")
 	jiraClient = NewJira(config.BaseUrl, config.Login, config.Password)
-	jiraClient.DumpResults = true
+	// jiraClient.DumpResults = true
 }
 
 func TestFetchRapidViews(t *testing.T) {
