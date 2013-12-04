@@ -8,7 +8,7 @@ import (
 var jiraClient *Jira
 
 func init() {
-	config := loadConfig("test.yaml")
+	config := LoadConfig("test.yaml")
 	jiraClient = NewJira(config.BaseUrl, config.Login, config.Password)
 	jiraClient.DumpResults = true
 }
@@ -49,9 +49,7 @@ func TestSearch(t *testing.T) {
 		keys = append(keys, Issue.Key)
 	}
 
-	issues := jiraClient.fetchIssues(keys)
-
-	// fmt.Printf("%#v\n", issues)
+	issues := jiraClient.FetchIssues(keys)
 
 	for _, issue := range issues.Issues {
 		for _, item := range issue.Changelog.Histories.Items {

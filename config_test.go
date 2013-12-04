@@ -5,7 +5,7 @@ import (
 )
 
 func TestLoadConfig(t *testing.T) {
-	config := loadConfig("jira.yaml")
+	config := LoadConfig("jira.yaml")
 	if config.BaseUrl == "" || config.Login == "" || config.Password == "" {
 		t.Error("config should not be empty")
 	}
