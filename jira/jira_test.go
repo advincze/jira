@@ -5,48 +5,42 @@ import (
 	"testing"
 )
 
-var jiraClient = JiraWithConfig("test.yaml")
-
-func init() {
-	jiraClient.DumpResults = false
-}
-
 func TestFetchRapidViews(t *testing.T) {
 
-	rapidViews := jiraClient.FetchViews()
+	rapidViews := defaultClient.FetchViews()
 
 	if rapidViews == nil {
 		t.Error("rapidViews should not be empty")
 	}
 }
 
-func TestSprints(t *testing.T) {
+func _TestSprints(t *testing.T) {
 
-	sprints := jiraClient.FetchSprints(51)
+	sprints := defaultClient.FetchSprints(51)
 
 	if sprints == nil {
 		t.Error("sprints should not be empty")
 	}
 }
 
-func TestSprintDetails(t *testing.T) {
+func _TestSprintDetails(t *testing.T) {
 
-	sprintDetails := jiraClient.FetchSprintDetails(51, 217)
+	sprintDetails := defaultClient.FetchSprintDetails(51, 217)
 
 	if sprintDetails == nil {
 		t.Error("sprintDetails should not be empty")
 	}
 }
 
-func TestSearch(t *testing.T) {
+func _TestSearch(t *testing.T) {
 
-	sprintDetails := jiraClient.FetchSprintDetails(51, 217)
+	sprintDetails := defaultClient.FetchSprintDetails(51, 217)
 
 	keys := make([]string, 0, 100)
 	for _, Issue := range sprintDetails.Contents.IncompletedIssues {
 		keys = append(keys, Issue.Key)
 	}
-	issues := jiraClient.FetchIssues(keys)
+	issues := defaultClient.FetchIssues(keys)
 
 	for _, issue := range issues.Issues {
 		for _, item := range issue.Changelog.Histories.Items {

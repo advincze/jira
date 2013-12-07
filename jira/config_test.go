@@ -4,14 +4,14 @@ import (
 	"testing"
 )
 
-func TestLoadConfig(t *testing.T) {
+func _TestLoadConfig(t *testing.T) {
 	config := LoadConfig("jira.yaml")
 	if config.BaseUrl == "" || config.Login == "" || config.Password == "" {
 		t.Error("config should not be empty")
 	}
 }
 
-func TestWriteConfig(t *testing.T) {
+func _TestWriteConfig(t *testing.T) {
 	config := &Config{}
 	config.BaseUrl = "http://google.com"
 	config.Login = "rob"

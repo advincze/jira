@@ -54,14 +54,6 @@ func main2() {
 
 }
 
-type Burndown struct {
-	SprintStart  time.Time
-	SprintEnd    time.Time
-	IdealLine    map[time.Time]int
-	RealLine     map[time.Time]int
-	TaskAffected map[time.Time]string
-}
-
 func main() {
 
 	board := jira.GetBoard("Release Planning Board")
@@ -70,6 +62,6 @@ func main() {
 	fmt.Printf("%v\n", sprint)
 	issues := sprint.GetIssues().FilterByLabel("MagicWombats")
 	fmt.Printf("%v\n", issues)
-	burndown := sprint.CreateBurndown(issues)
-	// burndown2 := sprint.CreateDailyBurndown(issues)
+	burndown := jira.CreateBurndown(sprint, issues)
+	fmt.Printf("%v\n", burndown)
 }

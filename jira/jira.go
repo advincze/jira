@@ -2,7 +2,6 @@ package jira
 
 import (
 	"encoding/json"
-	"errors"
 	"fmt"
 	"io/ioutil"
 	"net/http"
@@ -12,7 +11,7 @@ import (
 	"time"
 )
 
-type Jira struct {
+type JiraClient struct {
 	BaseUrl     string
 	Auth        *Auth
 	client      *http.Client
@@ -24,9 +23,17 @@ type Auth struct {
 	password string
 }
 
-var jiraClient = JiraWithConfig("test.yaml")
+var defaultClient *JiraClient
+
+func init() {
+	defaultClient = JiraWithConfig("jira.yaml")
+}
 
 func GetBoard(boardName string) *Board {
+	return defaultClient.GetBoard(boardName)
+}
+
+func (jiraClient *JiraClient) GetBoard(boardName string) *Board {
 
 	views := jiraClient.FetchViews()
 	boardId, _ := views.GetBoardId(boardName)
@@ -49,9 +56,9 @@ type Board struct {
 
 func (b *Board) GetSprint(sprintName string) *Sprint {
 	sprintId, _ := b.sprints.GetSprintId(sprintName)
-	sprintDetails := jiraClient.FetchSprintDetails(b.boardId, sprintId)
+	sprintDetails := defaultClient.FetchSprintDetails(b.boardId, sprintId)
 	keys := sprintDetails.GetIssueKeys()
-	issuesx := jiraClient.FetchIssues(keys)
+	issuesx := defaultClient.FetchIssues(keys)
 	start, _ := time.Parse("02/Jan/06 15:04 PM", sprintDetails.Sprint.StartDate)
 	end, _ := time.Parse("02/Jan/06 15:04 PM", sprintDetails.Sprint.EndDate)
 	issues := make([]*Issue, 0, len(issuesx.Issues))
@@ -126,13 +133,13 @@ const (
 	sprintDetailsEndpoint = "/rest/greenhopper/1.0/rapid/charts/sprintreport?rapidViewId=%d&sprintId=%d"
 )
 
-func JiraWithConfig(configFile string) *Jira {
+func JiraWithConfig(configFile string) *JiraClient {
 	config := LoadConfig(configFile)
 	return NewJira(config.BaseUrl, config.Login, config.Password)
 }
 
-func NewJira(baseUrl, login, password string) *Jira {
-	jira := &Jira{
+func NewJira(baseUrl, login, password string) *JiraClient {
+	jira := &JiraClient{
 		BaseUrl: baseUrl,
 		Auth: &Auth{
 			login:    login,
@@ -143,27 +150,32 @@ func NewJira(baseUrl, login, password string) *Jira {
 	return jira
 }
 
-func (jr *Jira) FetchViews() (rapidViews *RapidViews) {
+func (jr *JiraClient) FetchViews() (rapidViews *RapidViews) {
 	jr.fetchJson(rapidViewsEndpoint, &rapidViews)
 	return
 }
 
-func (jr *Jira) FetchSprints(rapidViewId int) (sprints *Sprints) {
+func (jr *JiraClient) FetchSprints(rapidViewId int) (sprints *Sprints) {
 	jr.fetchJson(fmt.Sprintf(sprintsEndpoint, rapidViewId), &sprints)
 	return
 }
 
-func (jr *Jira) FetchSprintDetails(rapidViewId, sprintId int) (sprintDetails *SprintDetails) {
+func (jr *JiraClient) FetchSprintDetails(rapidViewId, sprintId int) (sprintDetails *SprintDetails) {
 	jr.fetchJson(fmt.Sprintf(sprintDetailsEndpoint, rapidViewId, sprintId), &sprintDetails)
 	return
 }
 
-func (jr *Jira) FetchIssues(keys []string) (searchResult *SearchResult) {
+func (jr *JiraClient) FetchIssues(keys []string) (searchResult *SearchResult) {
 	jql := fmt.Sprintf("key in (%s) OR parent in (%[1]s)", strings.Join(keys, ","))
 	return jr.SearchIssues(jql, "*all", "changelog")
 }
 
-func (jr *Jira) SearchIssues(jql, fields, expand string) (searchResult *SearchResult) {
+func (jr *JiraClient) FetchSprintIssues(sprintId int) (searchResult *SearchResult) {
+	jql := fmt.Sprintf("Sprint=%d", sprintId)
+	return jr.SearchIssues(jql, "*all", "changelog")
+}
+
+func (jr *JiraClient) SearchIssues(jql, fields, expand string) (searchResult *SearchResult) {
 	val := url.Values{}
 	val.Set("jql", jql)
 	val.Set("fields", fields)
@@ -172,7 +184,7 @@ func (jr *Jira) SearchIssues(jql, fields, expand string) (searchResult *SearchRe
 	return
 }
 
-func (jr *Jira) fetchJson(endpointUrl string, object interface{}) {
+func (jr *JiraClient) fetchJson(endpointUrl string, object interface{}) {
 	req, _ := http.NewRequest("GET", jr.BaseUrl+endpointUrl, nil)
 
 	req.SetBasicAuth(jr.Auth.login, jr.Auth.password)
@@ -198,197 +210,4 @@ func (jr *Jira) fetchJson(endpointUrl string, object interface{}) {
 	dec := json.NewDecoder(resp.Body)
 
 	dec.Decode(&object)
-}
-
-type RapidViews struct {
-	Views []*RapidView
-}
-
-func (r *RapidViews) GetBoardId(boardName string) (int, error) {
-	for _, view := range r.Views {
-		if view.Name == boardName {
-			return view.Id, nil
-		}
-	}
-	return 0, errors.New("board not found")
-}
-
-type RapidView struct {
-	Id                   int
-	Name                 string
-	CanEdit              bool
-	SprintSupportEnabled bool
-}
-
-type Sprints struct {
-	RapidViewId int
-	Sprints     []*SprintX
-}
-
-func (s *Sprints) GetSprintId(sprintName string) (int, error) {
-	for _, sprint := range s.Sprints {
-		if sprint.Name == sprintName {
-			return sprint.Id, nil
-		}
-	}
-	return 0, errors.New("sprint not found")
-}
-
-type SprintX struct {
-	Id        int
-	Name      string
-	State     string
-	StartDate string
-	EndDate   string
-}
-
-type SprintDetails struct {
-	Contents struct {
-		CompletedIssues   []*IssueX
-		IncompletedIssues []*IssueX
-		PuntedIssues      []*IssueX
-	}
-	Sprint *SprintX
-}
-
-func (s *SprintDetails) GetIssueKeys() []string {
-	keys := make([]string, 0, len(s.Contents.CompletedIssues)+len(s.Contents.IncompletedIssues))
-	for _, issue := range s.Contents.CompletedIssues {
-		keys = append(keys, issue.Key)
-	}
-	for _, issue := range s.Contents.IncompletedIssues {
-		keys = append(keys, issue.Key)
-	}
-	for _, issue := range s.Contents.PuntedIssues {
-		keys = append(keys, issue.Key)
-	}
-	return keys
-}
-
-type IssueX struct {
-	Id         int
-	Key        string
-	StatusId   string
-	StatusName string
-	Expand     string
-	Fields     *IssueFields
-	Changelog  *Changelog
-}
-
-type Changelog struct {
-	StartAt   int
-	Histories []*History
-}
-
-type History struct {
-	Id      int
-	Created string
-	Items   []*HistoryItem
-}
-
-type HistoryItem struct {
-	Field      string
-	FromString string
-	ToString   string
-}
-
-type IssueFields struct {
-	Summary     string
-	Description string
-	Updated     string
-	Created     string
-	status      struct {
-		Name string
-	}
-	Issuetype *IssueType
-	Priority  struct {
-		Name string
-	}
-	Subtasks              []*IssueX
-	Aggregatetimeestimate int
-	Labels                []string
-	Timetracking          struct {
-		OriginalEstimateSeconds int
-	}
-}
-
-type IssueType struct {
-	Self        string
-	Id          string
-	Description string
-	IconUrl     string
-	Name        string
-	Subtask     bool
-}
-
-type SearchResult struct {
-	Expand     string
-	StartAt    int
-	MaxResults int
-	Total      int
-	Issues     []*IssueX
-}
-
-func Closed(history *History) bool {
-	for _, item := range history.Items {
-		if item.Field == "status" {
-			switch item.FromString {
-			case "Open":
-				break
-			case "Planung":
-				break
-			case "In Progress":
-				break
-			case "Geschlossen":
-				return false
-			}
-
-			switch item.ToString {
-			case "Open":
-				break
-			case "Planung":
-				break
-			case "In Progress":
-				break
-			case "Geschlossen":
-				return true
-			}
-		}
-	}
-	return false
-
-}
-
-func (s *SearchResult) GetTimeLine(from, to time.Time) []time.Time {
-	timeline := make([]time.Time, 0, len(s.Issues)*3)
-	for _, issue := range s.Issues {
-		if len(issue.Changelog.Histories) == 0 {
-			fmt.Printf("issue with no changelog: %v, %v, %v \n", issue.Key, issue.Fields.Issuetype.Name, issue.Fields.Timetracking.OriginalEstimateSeconds)
-		}
-		for _, history := range issue.Changelog.Histories {
-			t, _ := time.Parse("2006-01-02T15:04:05.000-0700", history.Created)
-			if t.After(from) && t.Before(to) {
-				closed := Closed(history)
-				for _, item := range history.Items {
-					if item.Field == "status" || item.Field == "Sprint" || item.Field == "timeestimate" {
-						fmt.Printf("%d : %v - [%v] %v -> %v %v , %v \n", t.Unix(), issue.Key, item.Field, item.FromString, item.ToString, closed, issue.Fields.Issuetype.Name)
-					} else {
-						fmt.Printf("%d : %v - [%v] \n", t.Unix(), issue.Key, item.Field)
-					}
-				}
-			} else {
-				for _, item := range history.Items {
-					fmt.Printf("XXX %d : %v - [%v] \n", t.Unix(), issue.Key, item.Field)
-				}
-
-			}
-
-			// if Closed(history) {
-			// 	t, _ := time.Parse("2006-01-02T15:04:05.000-0700", history.Created)
-			// 	fmt.Printf("at time %v the estimate of %v changed by %v \n", t.String(), issue.Key, issue.Fields.Timetracking.OriginalEstimateSeconds)
-			// }
-
-		}
-	}
-	return timeline
 }
