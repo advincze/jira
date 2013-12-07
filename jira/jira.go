@@ -29,6 +29,10 @@ func init() {
 	defaultClient = JiraWithConfig("jira.yaml")
 }
 
+func SetConfig(configFile string) {
+	defaultClient = JiraWithConfig(configFile)
+}
+
 func GetBoard(boardName string) *Board {
 	return defaultClient.GetBoard(boardName)
 }
@@ -57,8 +61,8 @@ type Board struct {
 func (b *Board) GetSprint(sprintName string) *Sprint {
 	sprintId, _ := b.sprints.GetSprintId(sprintName)
 	sprintDetails := defaultClient.FetchSprintDetails(b.boardId, sprintId)
-	keys := sprintDetails.GetIssueKeys()
-	issuesx := defaultClient.FetchIssues(keys)
+	// keys := sprintDetails.GetIssueKeys()
+	issuesx := defaultClient.FetchSprintIssues(sprintId)
 	start, _ := time.Parse("02/Jan/06 15:04 PM", sprintDetails.Sprint.StartDate)
 	end, _ := time.Parse("02/Jan/06 15:04 PM", sprintDetails.Sprint.EndDate)
 	issues := make([]*Issue, 0, len(issuesx.Issues))
@@ -72,26 +76,24 @@ func (b *Board) GetSprint(sprintName string) *Sprint {
 	}
 
 	return &Sprint{
-		sprintx:    sprintDetails.Sprint,
 		Start:      start,
 		End:        end,
 		sprintName: sprintName,
 		sprintId:   sprintId,
-		issueKeys:  keys,
-		issuesx:    issuesx.Issues,
-		Issues:     issues,
+		// issueKeys:  keys,
+		// issuesx: issuesx.Issues,
+		Issues: issues,
 	}
 }
 
 type Sprint struct {
-	sprintx    *SprintX
 	Start      time.Time
 	End        time.Time
 	sprintName string
 	sprintId   int
 	issueKeys  []string
-	issuesx    []*IssueX
-	Issues     []*Issue
+	// issuesx    []*IssueX
+	Issues []*Issue
 }
 
 func (s *Sprint) GetIssues() Issues {

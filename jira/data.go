@@ -7,14 +7,12 @@ import (
 )
 
 type RapidViews struct {
-	Views []*RapidView
-}
-
-type RapidView struct {
-	Id                   int
-	Name                 string
-	CanEdit              bool
-	SprintSupportEnabled bool
+	Views []*struct {
+		Id                   int
+		Name                 string
+		CanEdit              bool
+		SprintSupportEnabled bool
+	}
 }
 
 func (r *RapidViews) GetBoardId(boardName string) (int, error) {
@@ -28,7 +26,11 @@ func (r *RapidViews) GetBoardId(boardName string) (int, error) {
 
 type Sprints struct {
 	RapidViewId int
-	Sprints     []*SprintX
+	Sprints     []struct {
+		Id    int
+		Name  string
+		State string
+	}
 }
 
 func (s *Sprints) GetSprintId(sprintName string) (int, error) {
@@ -40,46 +42,25 @@ func (s *Sprints) GetSprintId(sprintName string) (int, error) {
 	return 0, errors.New("sprint not found")
 }
 
-type SprintX struct {
-	Id        int
-	Name      string
-	State     string
-	StartDate string
-	EndDate   string
-}
-
 type SprintDetails struct {
-	Contents struct {
-		CompletedIssues   []*IssueX
-		IncompletedIssues []*IssueX
-		PuntedIssues      []*IssueX
+	Sprint struct {
+		Id        int
+		Name      string
+		State     string
+		StartDate string
+		EndDate   string
 	}
-	Sprint *SprintX
 }
 
-func (s *SprintDetails) GetIssueKeys() []string {
-	keys := make([]string, 0, len(s.Contents.CompletedIssues)+len(s.Contents.IncompletedIssues))
-	for _, issue := range s.Contents.CompletedIssues {
-		keys = append(keys, issue.Key)
-	}
-	for _, issue := range s.Contents.IncompletedIssues {
-		keys = append(keys, issue.Key)
-	}
-	for _, issue := range s.Contents.PuntedIssues {
-		keys = append(keys, issue.Key)
-	}
-	return keys
-}
-
-type IssueX struct {
-	Id         int
-	Key        string
-	StatusId   string
-	StatusName string
-	Expand     string
-	Fields     *IssueFields
-	Changelog  *Changelog
-}
+// type IssueX struct {
+// 	Id         int
+// 	Key        string
+// 	StatusId   string
+// 	StatusName string
+// 	Expand     string
+// 	Fields     *IssueFields
+// 	Changelog  *Changelog
+// }
 
 type Changelog struct {
 	StartAt   int
@@ -110,7 +91,6 @@ type IssueFields struct {
 	Priority  struct {
 		Name string
 	}
-	Subtasks              []*IssueX
 	Aggregatetimeestimate int
 	Labels                []string
 	Timetracking          struct {
@@ -132,7 +112,15 @@ type SearchResult struct {
 	StartAt    int
 	MaxResults int
 	Total      int
-	Issues     []*IssueX
+	Issues     []*struct {
+		Id         int
+		Key        string
+		StatusId   string
+		StatusName string
+		Expand     string
+		Fields     *IssueFields
+		Changelog  *Changelog
+	}
 }
 
 func Closed(history *History) bool {
