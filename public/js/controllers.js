@@ -32,36 +32,45 @@ function ChartCtrl($scope, $http) {
         lines: { show: true }
     }];
 
-    $http({method: 'GET', url: '/data/burndown?boardId='+$scope.boardId+'&sprintId='+ $scope.sprintId})
-    .success(function(data, status, headers, config) {
-        // var start = Date.parse(data.sprintstart);
-        // var end = Date.parse(data.sprintend);
-        var totaldata = [];
-        for(var i in data.timeline){
-            var elem = data.timeline[i];
-            totaldata.push([Date.parse(elem.timestamp),elem.remainingWorkInHours]);
-        }
-        $scope.chart.data[2].data = totaldata;
-    }).
-    error(function(data, status, headers, config) {
+    // $http({method: 'GET', url: '/data/burndown?boardId='+$scope.boardId+'&sprintId='+ $scope.sprintId})
+    // .success(function(data, status, headers, config) {
+    //     // var start = Date.parse(data.sprintstart);
+    //     // var end = Date.parse(data.sprintend);
+    //     var totaldata = [];
+    //     for(var i in data.timeline){
+    //         var elem = data.timeline[i];
+    //         totaldata.push([Date.parse(elem.timestamp),elem.remainingWorkInHours]);
+    //     }
+    //     $scope.chart.data[2].data = totaldata;
+    // }).
+    // error(function(data, status, headers, config) {
 
-    });
+    // });
 
+    $scope.boards = [];
+    $scope.board = {};
     $http({method: 'GET', url: '/data/boards'})
     .success(function(data, status, headers, config) {
         console.log("boards: ",data);
+        $scope.boards = data;
     }).
     error(function(data, status, headers, config) {
 
     });
 
-    $http({method: 'GET', url: '/data/sprints?boardId='+$scope.boardId})
+    $scope.sprints = [];
+    $scope.sprint = {};
+    $scope.refreshSprints = function(){
+        console.log("board: "+$scope.board.Id);
+        $http({method: 'GET', url: '/data/sprints?boardId='+$scope.board.Id})
     .success(function(data, status, headers, config) {
         console.log("sprints: ",data);
+        $scope.sprints = data;
+        console.log("sprints: "+$scope.sprints);
     }).
     error(function(data, status, headers, config) {
 
-    });
-
+    });    
+    }
 }
 ChartCtrl.$inject = ['$scope', '$http'];
