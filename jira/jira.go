@@ -30,12 +30,34 @@ func init() {
 	defaultClient = JiraWithConfig("jira.yaml")
 }
 
+func SetTest(test bool) {
+	defaultClient.Test = test
+}
+
 func SetConfig(configFile string) {
 	defaultClient = JiraWithConfig(configFile)
 }
 
 func GetBoard(boardName string) *Board {
 	return defaultClient.GetBoard(boardName)
+}
+
+func GetBoards() []*Board {
+	return defaultClient.GetBoards()
+}
+
+func (jiraClient *JiraClient) GetBoards() []*Board {
+
+	views := jiraClient.FetchViews()
+	boards := make([]*Board, 0, len(views.Views))
+	for _, view := range views.Views {
+		boards = append(boards, &Board{
+			Id:   view.Id,
+			Name: view.Name,
+		})
+	}
+
+	return boards
 }
 
 func (jiraClient *JiraClient) GetBoard(boardName string) *Board {
@@ -45,33 +67,75 @@ func (jiraClient *JiraClient) GetBoard(boardName string) *Board {
 	sprints := jiraClient.FetchSprints(boardId)
 
 	return &Board{
+		Id:         boardId,
+		Name:       boardName,
 		boardId:    boardId,
 		boardName:  boardName,
 		rapidViews: views,
-		sprints:    sprints,
+		Sprints:    sprints,
+	}
+}
+
+func GetBoardById(boardId int) *Board {
+	return defaultClient.GetBoardById(boardId)
+}
+
+func (jiraClient *JiraClient) GetBoardById(boardId int) *Board {
+
+	views := jiraClient.FetchViews()
+	var boardName string
+	for _, view := range views.Views {
+		if view.Id == boardId {
+			boardName = view.Name
+			break
+		}
+	}
+
+	sprints := jiraClient.FetchSprints(boardId)
+
+	return &Board{
+		Id:         boardId,
+		Name:       boardName,
+		boardId:    boardId,
+		boardName:  boardName,
+		rapidViews: views,
+		Sprints:    sprints,
 	}
 }
 
 type Board struct {
+	Id         int
+	Name       string
 	boardId    int
 	boardName  string
 	rapidViews *RapidViews
-	sprints    *Sprints
+	Sprints    *Sprints
 }
 
-func (b *Board) GetSprint(sprintName string) *Sprint {
-	sprintId, _ := b.sprints.GetSprintId(sprintName)
-	sprintDetails := defaultClient.FetchSprintDetails(b.boardId, sprintId)
-	// keys := sprintDetails.GetIssueKeys()
-	issuesx := defaultClient.FetchSprintIssues(sprintId)
+func GetSprintById(boardId, sprintId int) *Sprint {
+	sprintDetails := defaultClient.FetchSprintDetails(boardId, sprintId)
 	start, _ := time.Parse("02/Jan/06 15:04 PM", sprintDetails.Sprint.StartDate)
 	end, _ := time.Parse("02/Jan/06 15:04 PM", sprintDetails.Sprint.EndDate)
-	issues := make([]*Issue, 0, len(issuesx.Issues))
-	for _, issuex := range issuesx.Issues {
 
+	searchResults := defaultClient.FetchSprintIssues(sprintId)
+	issues := make([]*Issue, 0, len(searchResults.Issues))
+	for _, foundIssue := range searchResults.Issues {
+		changes := make([]IssueChange, 0, 10)
+		for _, history := range foundIssue.Changelog.Histories {
+			created, _ := time.Parse("2006-01-02T15:04:05.000-0700", history.Created)
+			if history.isClosingEntry() {
+				change := IssueChange{
+					Timestamp:            created,
+					EffortAddedInSeconds: -foundIssue.Fields.Timetracking.OriginalEstimateSeconds,
+				}
+				changes = append(changes, change)
+			}
+		}
 		issue := &Issue{
-			Key:    issuex.Key,
-			Labels: issuex.Fields.Labels,
+			Key:             foundIssue.Key,
+			Labels:          foundIssue.Fields.Labels,
+			EffortInSeconds: foundIssue.Fields.Timetracking.OriginalEstimateSeconds,
+			Changelog:       changes,
 		}
 		issues = append(issues, issue)
 	}
@@ -79,10 +143,15 @@ func (b *Board) GetSprint(sprintName string) *Sprint {
 	return &Sprint{
 		Start:      start,
 		End:        end,
-		sprintName: sprintName,
+		sprintName: sprintDetails.Sprint.Name,
 		sprintId:   sprintId,
 		Issues:     issues,
 	}
+}
+
+func (board *Board) GetSprint(sprintName string) *Sprint {
+	sprintId, _ := board.Sprints.GetSprintId(sprintName)
+	return GetSprintById(board.boardId, sprintId)
 }
 
 type Sprint struct {
@@ -95,20 +164,24 @@ type Sprint struct {
 }
 
 type Issue struct {
-	Key    string
-	Labels []string
+	Key             string
+	Labels          []string
+	EffortInSeconds int
+	Changelog       []IssueChange
+}
+
+type IssueChange struct {
+	Timestamp            time.Time
+	EffortAddedInSeconds int
 }
 
 type Issues []*Issue
 
 func (issues Issues) FilterByLabel(labelToSearch string) Issues {
 	filteredIssues := make([]*Issue, 0, len(issues))
-	// fmt.Printf("filtering: %d issues \n", len(issues))
 	for _, issue := range issues {
-		// fmt.Printf("issue: %v \n", issue.Key)
 		var containsLabel bool
 		for _, labelFound := range issue.Labels {
-			// fmt.Printf("label found: %s \n", labelFound)
 			if labelFound == labelToSearch {
 				containsLabel = true
 				break

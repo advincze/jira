@@ -52,69 +52,61 @@ type SprintDetails struct {
 	}
 }
 
-type Changelog struct {
-	StartAt   int
-	Histories []*History
-}
-
-type History struct {
-	Id      int
-	Created string
-	Items   []*HistoryItem
-}
-
-type HistoryItem struct {
-	Field      string
-	FromString string
-	ToString   string
-}
-
-type IssueFields struct {
-	Summary     string
-	Description string
-	Updated     string
-	Created     string
-	status      struct {
-		Name string
-	}
-	Issuetype *IssueType
-	Priority  struct {
-		Name string
-	}
-	Aggregatetimeestimate int
-	Labels                []string
-	Timetracking          struct {
-		OriginalEstimateSeconds int
-	}
-}
-
-type IssueType struct {
-	Self        string
-	Id          string
-	Description string
-	IconUrl     string
-	Name        string
-	Subtask     bool
-}
-
 type SearchResult struct {
 	Expand     string
 	StartAt    int
 	MaxResults int
 	Total      int
-	Issues     []*struct {
+	Issues     []struct {
 		Id         int
 		Key        string
 		StatusId   string
 		StatusName string
 		Expand     string
-		Fields     *IssueFields
-		Changelog  *Changelog
+		Fields     struct {
+			Summary     string
+			Description string
+			Updated     string
+			Created     string
+			status      struct {
+				Name string
+			}
+			Issuetype struct {
+				Self        string
+				Id          string
+				Description string
+				IconUrl     string
+				Name        string
+				Subtask     bool
+			}
+			Priority struct {
+				Name string
+			}
+			Aggregatetimeestimate int
+			Labels                []string
+			Timetracking          struct {
+				OriginalEstimateSeconds int
+			}
+		}
+		Changelog struct {
+			StartAt   int
+			Histories []History
+		}
 	}
 }
 
-func Closed(history *History) bool {
-	for _, item := range history.Items {
+type History struct {
+	Id      int
+	Created string
+	Items   []struct {
+		Field      string
+		FromString string
+		ToString   string
+	}
+}
+
+func (h *History) isClosingEntry() bool {
+	for _, item := range h.Items {
 		if item.Field == "status" {
 			switch item.FromString {
 			case "Open":
@@ -140,7 +132,6 @@ func Closed(history *History) bool {
 		}
 	}
 	return false
-
 }
 
 func (s *SearchResult) GetTimeLine(from, to time.Time) []time.Time {
@@ -152,7 +143,7 @@ func (s *SearchResult) GetTimeLine(from, to time.Time) []time.Time {
 		for _, history := range issue.Changelog.Histories {
 			t, _ := time.Parse("2006-01-02T15:04:05.000-0700", history.Created)
 			if t.After(from) && t.Before(to) {
-				closed := Closed(history)
+				closed := history.isClosingEntry()
 				for _, item := range history.Items {
 					if item.Field == "status" || item.Field == "Sprint" || item.Field == "timeestimate" {
 						fmt.Printf("%d : %v - [%v] %v -> %v %v , %v \n", t.Unix(), issue.Key, item.Field, item.FromString, item.ToString, closed, issue.Fields.Issuetype.Name)

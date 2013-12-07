@@ -5,7 +5,7 @@ import (
 )
 
 func init() {
-	defaultClient.Test = true
+	// defaultClient.Test = true
 }
 
 func TestFetchRapidViews(t *testing.T) {
