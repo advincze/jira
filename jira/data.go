@@ -52,16 +52,6 @@ type SprintDetails struct {
 	}
 }
 
-// type IssueX struct {
-// 	Id         int
-// 	Key        string
-// 	StatusId   string
-// 	StatusName string
-// 	Expand     string
-// 	Fields     *IssueFields
-// 	Changelog  *Changelog
-// }
-
 type Changelog struct {
 	StartAt   int
 	Histories []*History

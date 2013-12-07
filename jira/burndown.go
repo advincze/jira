@@ -13,6 +13,11 @@ type Burndown struct {
 }
 
 func CreateBurndown(sprint *Sprint, issues []*Issue) *Burndown {
+
+	// for _, issue := range issues {
+
+	// }
+
 	return &Burndown{
 		SprintStart: sprint.Start,
 		SprintEnd:   sprint.End,

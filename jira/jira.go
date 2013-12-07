@@ -16,6 +16,7 @@ type JiraClient struct {
 	Auth        *Auth
 	client      *http.Client
 	DumpResults bool
+	Test        bool
 }
 
 type Auth struct {
@@ -80,9 +81,7 @@ func (b *Board) GetSprint(sprintName string) *Sprint {
 		End:        end,
 		sprintName: sprintName,
 		sprintId:   sprintId,
-		// issueKeys:  keys,
-		// issuesx: issuesx.Issues,
-		Issues: issues,
+		Issues:     issues,
 	}
 }
 
@@ -92,12 +91,7 @@ type Sprint struct {
 	sprintName string
 	sprintId   int
 	issueKeys  []string
-	// issuesx    []*IssueX
-	Issues []*Issue
-}
-
-func (s *Sprint) GetIssues() Issues {
-	return Issues(s.Issues)
+	Issues     Issues
 }
 
 type Issue struct {
@@ -153,16 +147,28 @@ func NewJira(baseUrl, login, password string) *JiraClient {
 }
 
 func (jr *JiraClient) FetchViews() (rapidViews *RapidViews) {
+	if jr.Test {
+		jr.loadJsonFile(".testdata/rapidviews.body", &rapidViews)
+		return
+	}
 	jr.fetchJson(rapidViewsEndpoint, &rapidViews)
 	return
 }
 
 func (jr *JiraClient) FetchSprints(rapidViewId int) (sprints *Sprints) {
+	if jr.Test {
+		jr.loadJsonFile(".testdata/sprints.body", &sprints)
+		return
+	}
 	jr.fetchJson(fmt.Sprintf(sprintsEndpoint, rapidViewId), &sprints)
 	return
 }
 
 func (jr *JiraClient) FetchSprintDetails(rapidViewId, sprintId int) (sprintDetails *SprintDetails) {
+	if jr.Test {
+		jr.loadJsonFile(".testdata/sprintDetails.body", &sprintDetails)
+		return
+	}
 	jr.fetchJson(fmt.Sprintf(sprintDetailsEndpoint, rapidViewId, sprintId), &sprintDetails)
 	return
 }
@@ -173,6 +179,10 @@ func (jr *JiraClient) FetchIssues(keys []string) (searchResult *SearchResult) {
 }
 
 func (jr *JiraClient) FetchSprintIssues(sprintId int) (searchResult *SearchResult) {
+	if jr.Test {
+		jr.loadJsonFile(".testdata/sprintIssues.body", &searchResult)
+		return
+	}
 	jql := fmt.Sprintf("Sprint=%d", sprintId)
 	return jr.SearchIssues(jql, "*all", "changelog")
 }
@@ -182,8 +192,16 @@ func (jr *JiraClient) SearchIssues(jql, fields, expand string) (searchResult *Se
 	val.Set("jql", jql)
 	val.Set("fields", fields)
 	val.Set("expand", expand)
+
 	jr.fetchJson(searchEndpoint+"?"+val.Encode(), &searchResult)
 	return
+}
+
+func (jr *JiraClient) loadJsonFile(fileName string, object interface{}) {
+
+	bytes, _ := ioutil.ReadFile(fileName)
+
+	json.Unmarshal(bytes, &object)
 }
 
 func (jr *JiraClient) fetchJson(endpointUrl string, object interface{}) {
