@@ -38,7 +38,9 @@ function ChartCtrl($scope, $http) {
             show: true
         }
     }];
-    
+
+    $scope.filters = ["MagicWombats"]
+
     $scope.boards = [];
     $scope.board = {};
     $http({
@@ -72,5 +74,17 @@ function ChartCtrl($scope, $http) {
             $scope.chart.data[2].data = totaldata;
         });
     }
+
+    $scope.selects = [{
+        "id": "1",
+        "name": "<i class=\"icon-star\"></i>&nbsp;foo"
+    }, {
+        "id": "2",
+        "name": "<i class=\"icon-heart\"></i>&nbsp;bar"
+    }, {
+        "id": "3",
+        "name": "<i class=\"icon-fire\"></i>&nbsp;baz"
+    }];
+    $scope.selectedItem = "1";
 }
 ChartCtrl.$inject = ['$scope', '$http'];

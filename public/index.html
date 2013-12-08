@@ -10,20 +10,13 @@
   <div class="container">
 
     <div class="page-header">
-      <h1>Burndown - {{board.Name}}RC-5.33 EX Magic Wombats</h1>
-      <br>
-      <select ng-model="board" ng-options="b.Name for b in boards" ng-change="refreshSprints()"></select>
-      <br>
-      {{board}}
-      <br>
-      <select ng-model="sprint" ng-options="s.Name for s in sprints" ng-change="refreshChart()"></select>
-      <br>
-      {{sprint}}
-      <br>
-
+      <h1>Burndown - {{board.Name}}-{{sprint.Name}} EX Magic Wombats</h1>
+      <div class="well">
+        <select class="span4" ng-model="board" ng-options="b.Name for b in boards" ng-change="refreshSprints()"></select>
+        <select class="span4" ng-model="sprint" ng-options="s.Name for s in sprints" ng-change="refreshChart()" ></select>
+      </div>
+      
     </div>
-
-
 
     <div>
       <chart ng-model='chart.data'></chart>
@@ -35,10 +28,12 @@
   <script src="js/jquery.flot.min.js"></script>
   <script src="js/jquery.flot.time.min.js"></script>
   <script src="js/jquery.flot.selection.min.js"></script>
+  <script src="js/bootstrap.min.js"></script>
   <script src="lib/angular/angular.js"></script>
   <script src="js/app.js"></script>
   <script src="js/services.js"></script>
   <script src="js/controllers.js"></script>
   <script src="js/directives.js"></script>
+  <!-- // <script src="js/angular-strap.min.js"></script> -->
 </body>
 </html>
