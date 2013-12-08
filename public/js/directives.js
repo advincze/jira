@@ -7,27 +7,26 @@ angular.module('jiraApp.directives', []).
 directive('chart', function() {
     return {
         restrict: 'E',
-        link: function(scope, elem, attrs){
+        link: function(scope, elem, attrs) {
 
             var chart = null,
-                opts  = {
+                opts = {
                     xaxis: {
                         mode: "time",
                         tickLength: 5
                     }
                 };
 
-
-            scope.$watch(attrs.ngModel, function(data){
-                if(!chart){
+            scope.$watch(attrs.ngModel, function(data) {
+                if (!chart) {
                     chart = $.plot(elem, data, opts);
                     elem.show();
-                }else{
+                } else {
                     chart.setData(data);
                     chart.setupGrid();
                     chart.draw();
                 }
-            },true);
+            }, true);
         }
     }
 

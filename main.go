@@ -37,54 +37,44 @@ const FILTER_LABEL = "filter"
 
 func burndownHandler(w http.ResponseWriter, r *http.Request) {
 	boardId, err := strconv.Atoi(r.FormValue(BOARD_ID))
-	if err != nil {
-		println(boardId)
-		panic(err)
-
-	}
+	panicerr(err)
 
 	sprintId, err := strconv.Atoi(r.FormValue(SPRINT_ID))
-	if err != nil {
-		println(sprintId)
-		panic(err)
-	}
+	panicerr(err)
 
 	sprint := jira.GetSprintById(boardId, sprintId)
-
 	issues := sprint.Issues
-	filterLabel := r.FormValue(FILTER_LABEL)
 
-	if filterLabel != "" {
+	if filterLabel := r.FormValue(FILTER_LABEL); filterLabel != "" {
 		issues = issues.FilterByLabel(filterLabel)
 	}
+
 	burndown := jira.CreateBurndown(sprint, issues)
 
 	bytes, _ := json.MarshalIndent(burndown, "", " ")
-
 	w.Write(bytes)
 }
 
 func boardsHandler(w http.ResponseWriter, r *http.Request) {
-
 	boards := jira.GetBoards()
 
 	bytes, _ := json.MarshalIndent(boards, "", " ")
-
 	w.Write(bytes)
 }
 
 func sprintsHandler(w http.ResponseWriter, r *http.Request) {
 	boardId, err := strconv.Atoi(r.FormValue(BOARD_ID))
-	if err != nil {
-		println(boardId)
-		panic(err)
-	}
-
+	panicerr(err)
 	board := jira.GetBoardById(boardId)
 
 	bytes, _ := json.MarshalIndent(board.Sprints, "", " ")
-
 	w.Write(bytes)
+}
+
+func panicerr(err error) {
+	if err != nil {
+		panic(err)
+	}
 }
 
 func startBrowser(url string) bool {

@@ -13,7 +13,14 @@
       <h1>Burndown - {{board.Name}}RC-5.33 EX Magic Wombats</h1>
       <br>
       <select ng-model="board" ng-options="b.Name for b in boards" ng-change="refreshSprints()"></select>
-      <select ng-model="sprint" ng-options="s.Name for s in sprints"></select>
+      <br>
+      {{board}}
+      <br>
+      <select ng-model="sprint" ng-options="s.Name for s in sprints" ng-change="refreshChart()"></select>
+      <br>
+      {{sprint}}
+      <br>
+
     </div>
 
 
@@ -21,10 +28,6 @@
     <div>
       <chart ng-model='chart.data'></chart>
     </div>
-    
-    <!-- <div>
-      <select ng-model="boards" name="name"></select>
-    </div> -->
     
   </div>
 
