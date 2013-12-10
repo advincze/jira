@@ -1,22 +1,27 @@
 package jira
 
 import (
+	"crypto/sha1"
 	"encoding/json"
 	"fmt"
+	"io"
 	"io/ioutil"
+	"log"
 	"net/http"
 	"net/http/httputil"
 	"net/url"
+	"os"
 	"strings"
 	"time"
 )
 
 type JiraClient struct {
-	BaseUrl     string
-	Auth        *Auth
-	client      *http.Client
-	DumpResults bool
-	Test        bool
+	BaseUrl       string
+	Auth          *Auth
+	client        *http.Client
+	DumpResults   bool
+	Test          bool
+	CacheRequests bool
 }
 
 type Auth struct {
@@ -28,6 +33,10 @@ var defaultClient *JiraClient
 
 func init() {
 	defaultClient = JiraWithConfig("jira.yaml")
+}
+
+func SetCache(cache bool) {
+	defaultClient.CacheRequests = cache
 }
 
 func SetTest(test bool) {
@@ -113,11 +122,14 @@ type Board struct {
 }
 
 func GetSprintById(boardId, sprintId int) *Sprint {
+	log.Printf("getSprintById boardId:%d, sprintId:%d \n", boardId, sprintId)
 	sprintDetails := defaultClient.FetchSprintDetails(boardId, sprintId)
 	start, _ := time.Parse("02/Jan/06 15:04 PM", sprintDetails.Sprint.StartDate)
 	end, _ := time.Parse("02/Jan/06 15:04 PM", sprintDetails.Sprint.EndDate)
 
 	searchResults := defaultClient.FetchSprintIssues(sprintId)
+	// log.Printf("search results %v \n", searchResults)
+	// log.Printf("found %d issues to sprintId: %d\n", len(searchResults.Issues), sprintId)
 	issues := make([]*Issue, 0, len(searchResults.Issues))
 	for _, foundIssue := range searchResults.Issues {
 		changes := make([]IssueChange, 0, 10)
@@ -129,6 +141,9 @@ func GetSprintById(boardId, sprintId int) *Sprint {
 					EffortAddedInSeconds: -foundIssue.Fields.Timetracking.OriginalEstimateSeconds,
 				}
 				changes = append(changes, change)
+				// log.Printf("closing issue history: %s  %d \n", foundIssue.Key, len(history.Items))
+			} else {
+				// log.Printf("non closing issue history: %s  %d \n", foundIssue.Key, len(history.Items))
 			}
 		}
 		issue := &Issue{
@@ -137,6 +152,8 @@ func GetSprintById(boardId, sprintId int) *Sprint {
 			EffortInSeconds: foundIssue.Fields.Timetracking.OriginalEstimateSeconds,
 			Changelog:       changes,
 		}
+		// log.Printf("issue added: %s cost: %d \n", issue.Key, issue.EffortInSeconds/3600)
+
 		issues = append(issues, issue)
 	}
 
@@ -171,6 +188,7 @@ type Issue struct {
 }
 
 type IssueChange struct {
+	Field                string
 	Timestamp            time.Time
 	EffortAddedInSeconds int
 }
@@ -260,11 +278,14 @@ func (jr *JiraClient) FetchSprintIssues(sprintId int) (searchResult *SearchResul
 	return jr.SearchIssues(jql, "*all", "changelog")
 }
 
+const maxSearchResults = 1000
+
 func (jr *JiraClient) SearchIssues(jql, fields, expand string) (searchResult *SearchResult) {
 	val := url.Values{}
 	val.Set("jql", jql)
 	val.Set("fields", fields)
 	val.Set("expand", expand)
+	val.Set("maxResults", fmt.Sprintf("%d", maxSearchResults))
 
 	jr.fetchJson(searchEndpoint+"?"+val.Encode(), &searchResult)
 	return
@@ -278,29 +299,67 @@ func (jr *JiraClient) loadJsonFile(fileName string, object interface{}) {
 }
 
 func (jr *JiraClient) fetchJson(endpointUrl string, object interface{}) {
-	req, _ := http.NewRequest("GET", jr.BaseUrl+endpointUrl, nil)
+
+	var fileName string
+	if jr.CacheRequests {
+		log.Printf("caching on... ")
+		h := sha1.New()
+		io.WriteString(h, endpointUrl)
+
+		fileName = fmt.Sprintf(".cache/%x", h.Sum(nil))
+		log.Printf("looking if file exists:  %s in cache", fileName)
+
+		if _, err := os.Stat(fileName); err == nil {
+
+			log.Printf("trying to read file %s from cache", fileName)
+			if bytes, err := ioutil.ReadFile(fileName); err == nil {
+				json.Unmarshal(bytes, &object)
+				return
+			} else {
+				log.Printf("cannot read file %s : %v \n", err)
+			}
+		}
+
+	}
+
+	url := jr.BaseUrl + endpointUrl
+	log.Printf("fetchJson: %s\n", url)
+
+	req, _ := http.NewRequest("GET", url, nil)
 
 	req.SetBasicAuth(jr.Auth.login, jr.Auth.password)
 
 	resp, _ := jr.client.Do(req)
+
+	body, _ := ioutil.ReadAll(resp.Body)
 
 	if jr.DumpResults {
 		file_postfix := time.Now().String()
 
 		bytes, _ := httputil.DumpResponse(resp, false)
 
-		ioutil.WriteFile(file_postfix+".resp", bytes, 0777)
+		ioutil.WriteFile(file_postfix+".resp", bytes, 0644)
 
 		bytes, _ = httputil.DumpRequest(req, false)
 
-		ioutil.WriteFile(file_postfix+".req", bytes, 0777)
+		ioutil.WriteFile(file_postfix+".req", bytes, 0644)
 
-		bytes, _ = ioutil.ReadAll(resp.Body)
-
-		ioutil.WriteFile(file_postfix+".body", bytes, 0777)
+		ioutil.WriteFile(file_postfix+".body", body, 0644)
 	}
 
-	dec := json.NewDecoder(resp.Body)
+	if jr.CacheRequests {
 
-	dec.Decode(&object)
+		// fileName := ".cache/" + base32.StdEncoding.EncodeToString([]byte(endpointUrl))
+		log.Printf("fetched : %d bytes\n", len(body))
+
+		os.Mkdir(".cache", 0777)
+
+		err := ioutil.WriteFile(fileName, body, 0644)
+		if err != nil {
+			log.Println(err)
+		}
+	}
+
+	json.Unmarshal(body, &object)
+
 }

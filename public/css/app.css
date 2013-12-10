@@ -1,5 +1,11 @@
+.chart{
+  width:90%;
+  height:90%;
+}
+
 chart{
   display:none;
-  width:850px;
-  height:460px;
+  margin-left: 5%;
+  width:90%;
+  height:70%;
 }

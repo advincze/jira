@@ -7,22 +7,23 @@
   <link rel="stylesheet" href="/css/app.css"/>
 </head>
 <body ng-controller="ChartCtrl">
-  <div class="container">
+  
 
     <div class="page-header">
       <h1>Burndown - {{board.Name}}-{{sprint.Name}} EX Magic Wombats</h1>
       <div class="well">
         <select class="span4" ng-model="board" ng-options="b.Name for b in boards" ng-change="refreshSprints()"></select>
         <select class="span4" ng-model="sprint" ng-options="s.Name for s in sprints" ng-change="refreshChart()" ></select>
+        <select class="span4" ng-model="filter" ng-options="f.name for f in filters" ng-change="refreshChart()" ></select>
       </div>
       
     </div>
 
-    <div>
-      <chart ng-model='chart.data'></chart>
+    <div class=" chart">
+      <chart ng-model="chart.data"></chart>
     </div>
     
-  </div>
+  
 
   <script src="js/jquery-1.10.2.min.js"></script>
   <script src="js/jquery.flot.min.js"></script>

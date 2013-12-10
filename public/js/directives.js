@@ -14,6 +14,12 @@ directive('chart', function() {
                     xaxis: {
                         mode: "time",
                         tickLength: 5
+                    },
+                    yaxis: {
+                        // ticks: 10,
+                        min: 0
+                        // max: 2,
+                        // tickDecimals: 3
                     }
                 };
 

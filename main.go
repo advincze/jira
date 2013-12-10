@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"flag"
 	"github.com/advincze/jira-client/jira"
+	"log"
 	"net/http"
 	"os/exec"
 	"runtime"
@@ -13,6 +14,7 @@ import (
 var port = flag.String("port", "8080", "webserver port")
 var openBrowser = flag.Bool("o", false, "open browser at startup")
 var testMode = flag.Bool("t", false, "start in test mode")
+var cacheMode = flag.Bool("c", false, "cache requests")
 
 func main() {
 
@@ -22,6 +24,7 @@ func main() {
 		startBrowser("http://localhost:" + *port + "/")
 	}
 	jira.SetTest(*testMode)
+	jira.SetCache(*cacheMode)
 
 	http.Handle("/", http.StripPrefix("/", http.FileServer(http.Dir("public"))))
 	http.HandleFunc("/data/burndown", burndownHandler)
@@ -45,8 +48,15 @@ func burndownHandler(w http.ResponseWriter, r *http.Request) {
 	sprint := jira.GetSprintById(boardId, sprintId)
 	issues := sprint.Issues
 
+	log.Printf("%d issues fetched\n", len(issues))
+
 	if filterLabel := r.FormValue(FILTER_LABEL); filterLabel != "" {
 		issues = issues.FilterByLabel(filterLabel)
+	}
+
+	log.Printf("%d issues remain after filtering\n", len(issues))
+	for _, issue := range issues {
+		log.Printf("issue: %s cost: %d\n", issue.Key, issue.EffortInSeconds/3600)
 	}
 
 	burndown := jira.CreateBurndown(sprint, issues)
