@@ -27,16 +27,17 @@ func CreateBurndown(sprint *Sprint, issues []*Issue) *Burndown {
 	effortChanges := make(map[time.Time]int)
 	totalWorkInHours := 0
 	for _, issue := range issues {
-		totalWorkInHours += issue.EffortInSeconds / secondsInHour
-		for _, change := range issue.Changelog {
-			effortChanges[change.Timestamp] = change.EffortAddedInSeconds
-			timelineElement := &TimelineElement{
-				Timestamp:            change.Timestamp,
-				TotalWorkInHours:     0,
-				RemainingWorkInHours: 0,
-				TaskAffected:         issue.Key,
+		totalWorkInHours += issue.OriginalEstimateSeconds / secondsInHour
+		for _, change := range issue.Changes {
+			if change.issueClosed() {
+				effortChanges[change.Timestamp] = -issue.OriginalEstimateSeconds
+				timelineElement := &TimelineElement{
+					Timestamp:    change.Timestamp,
+					TaskAffected: issue.Key,
+				}
+				timeline = append(timeline, timelineElement)
 			}
-			timeline = append(timeline, timelineElement)
+
 		}
 	}
 
@@ -55,20 +56,6 @@ func CreateBurndown(sprint *Sprint, issues []*Issue) *Burndown {
 		SprintEnd:   sprint.End,
 		Timeline:    timeline,
 	}
-}
-
-type Times []time.Time
-
-func (tt Times) Len() int {
-	return len(tt)
-}
-
-func (tt Times) Swap(i, j int) {
-	tt[i], tt[j] = tt[j], tt[i]
-}
-
-func (tt Times) Less(i, j int) bool {
-	return tt[i].Before(tt[j])
 }
 
 type TimelineElements []*TimelineElement

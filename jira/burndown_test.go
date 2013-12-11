@@ -6,16 +6,14 @@ import (
 )
 
 func init() {
-	// defaultClient.Test = true
+	testClient = NewJiraFromFile("../jira.yaml")
 }
 
 func TestCreateBurndown(t *testing.T) {
 
-	board := GetBoard("Release Planning Board")
+	sprint := FetchSprint("Release Planning Board", "RC-5.34")
 
-	sprint := board.GetSprint("RC-5.31")
-
-	issues := sprint.Issues //.FilterByLabel("MagicWombats")
+	issues := Issues(sprint.Issues).FilterByLabel("MagicWombats")
 
 	burndown := CreateBurndown(sprint, issues)
 

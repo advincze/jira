@@ -6,9 +6,8 @@ import (
 )
 
 type Config struct {
-	BaseUrl  string
-	Login    string
-	Password string
+	BaseUrl string
+	Auth    *Auth
 }
 
 func LoadConfig(fileName string) (config *Config) {
@@ -27,10 +26,4 @@ func (c *Config) writeConfig(fileName string) {
 
 	err = ioutil.WriteFile(fileName, bytes, 0777)
 	panicerr(err)
-}
-
-func panicerr(err error) {
-	if err != nil {
-		panic(err)
-	}
 }
