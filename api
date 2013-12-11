@@ -1,0 +1,29 @@
+
+
+jira.Cache(jira.Board, "30min")
+jira.Cache(jira.Sprint, "5min")
+jira.Cache(jira.Issue, "1min")
+
+jira.FetchBoardById(boardId int) *jira.Board
+board := jira.FetchBoardByName(boardName string) *jira.Board
+
+board.Id int
+board.SprintNames []string
+
+sprint := jira.FetchSprint(boardName, sprintName string) *Sprint
+
+sprint.Id int
+sprint.Start time.Time
+sprint.End time.Time
+sprint.Issues []*Issue
+
+issue.Id int
+issue.Key string
+issue.Type string    
+issue.OriginalEstimateSeconds int
+issue.Changes []*Change
+
+change.Timestamp time.Time
+change.Field string
+change.From string
+change.To string
