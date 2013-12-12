@@ -6,10 +6,24 @@ func init() {
 	defaultClient = NewJiraFromFile("jira.yaml")
 }
 
-func FetchBoardByName(boardName string) *Board {
-	return defaultClient.FetchBoardByName(boardName)
+func FetchBoards() []*Board {
+	return defaultClient.FetchBoards()
 }
 
-func FetchSprint(boardName, sprintName string) *Sprint {
-	return defaultClient.FetchSprint(boardName, sprintName)
+func FetchSprints(boardId int) []*Sprint {
+	return defaultClient.FetchSprints(boardId)
+}
+
+func FetchSprintDetails(boardId, sprintId int) *SprintDetails {
+	return defaultClient.FetchSprintDetails(boardId, sprintId)
+}
+
+func GetBurndown(boardId, sprintId int, label string) *Burndown {
+	sprintDetails := defaultClient.FetchSprintDetails(boardId, sprintId)
+	issues := sprintDetails.Issues
+	if label != "" {
+		issues = Issues(issues).FilterByLabel(label)
+	}
+
+	return createBurndown(sprintDetails.Start, sprintDetails.End, issues)
 }

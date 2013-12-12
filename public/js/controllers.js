@@ -2,7 +2,7 @@
 
 /* Controllers */
 
-function ChartCtrl($scope, $http) {
+function ChartCtrl($scope, $http, $cookieStore) {
 
     $scope.error = {
         msg: ""
@@ -13,11 +13,14 @@ function ChartCtrl($scope, $http) {
     $scope.sprintId = 217;
 
     $scope.filters = [
-        {name:"MagicWombats", value:"&filter=MagicWombats"},
-        {name:"ATeam", value:"&filter=ATeam"}, 
-        {name:"none", value:""}
-        ];
+        {name:"both teams", value:""},
+        {name:"MagicWombats", value:"&team=MagicWombats"},
+        {name:"ATeam", value:"&team=ATeam"}, 
+    ];
     $scope.filter = $scope.filters[0];
+    if ($cookieStore.get("filter")!=undefined) {
+        $scope.filter =$cookieStore.get("filter");
+    }
 
     var dayMillies = 60 * 60 * 24 * 1000;
 
@@ -45,8 +48,13 @@ function ChartCtrl($scope, $http) {
         }
     }];
 
+
+
     $scope.boards = [];
-    $scope.board = {};
+    $scope.board = $cookieStore.get("board");
+    if ($cookieStore.get("board")!=undefined) {
+        $scope.board =$cookieStore.get("board");
+    }
     $http({
         method: 'GET',
         url: '/data/boards'
@@ -54,25 +62,43 @@ function ChartCtrl($scope, $http) {
         $scope.boards = data;
     });
 
+    $scope.boardChanged = function(){
+        $cookieStore.put("board", $scope.board);
+        $scope.refreshSprints();
+    }
+
+    $scope.sprintChanged = function(){
+        $cookieStore.put("sprint", $scope.sprint);
+        $scope.refreshChart();
+    }
+
     $scope.sprints = [];
-    $scope.sprint = {};
+    $scope.sprint = $cookieStore.get("sprint");
+    if ($cookieStore.get("sprint")!=undefined) {
+        $scope.sprint =$cookieStore.get("sprint");
+    }
     $scope.refreshSprints = function() {
+        console.log("refreshSprints");
         $http({
             method: 'GET',
-            url: '/data/sprints?boardId=' + $scope.board.Id
+            url: '/data/sprints?board=' + $scope.board.Id
         }).success(function(data, status, headers, config) {
-            $scope.sprints = data.Sprints;
+            console.log("sprints done:"+$(data));
+            $scope.sprints = data;
+
         });
     };
 
     $scope.refreshChart = function() {
+        console.log("refreshChart");
+        $cookieStore.put("filter", $scope.filter);
         $http({
             method: 'GET',
-            url: '/data/burndown?boardId=' + $scope.board.Id + '&sprintId=' + $scope.sprint.Id +$scope.filter.value
+            url: '/data/burndown?board=' + $scope.board.Id + '&sprint=' + $scope.sprint.Id +$scope.filter.value
         }).success(function(data) {
             var sprintstart = Date.parse(data.sprintstart);
             var sprintend = Date.parse(data.sprintend);
-            console.log("sprint "+sprintstart+" "+sprintend);
+            // console.log("sprint "+sprintstart+" "+sprintend);
             var totaldata = [[sprintstart, data.timeline[0].totalWorkInHours]];
             var lastelem;
             
@@ -80,7 +106,7 @@ function ChartCtrl($scope, $http) {
             for (var i in data.timeline) {
                 var elem = data.timeline[i];
                 var timestamp = Date.parse(elem.timestamp);
-                console.log("timest"+timestamp);
+                // console.log("timest"+timestamp);
                 if(timestamp>sprintstart && timestamp<sprintend){
                     totaldata.push([timestamp, elem.remainingWorkInHours]);
                     lastelem = elem.remainingWorkInHours;
@@ -97,18 +123,9 @@ function ChartCtrl($scope, $http) {
             $scope.chart.data[1].data = idealdata;            
 
         });
+    
     }
 
-    $scope.selects = [{
-        "id": "1",
-        "name": "<i class=\"icon-star\"></i>&nbsp;foo"
-    }, {
-        "id": "2",
-        "name": "<i class=\"icon-heart\"></i>&nbsp;bar"
-    }, {
-        "id": "3",
-        "name": "<i class=\"icon-fire\"></i>&nbsp;baz"
-    }];
-    $scope.selectedItem = "1";
+    $scope.refreshChart();
 }
-ChartCtrl.$inject = ['$scope', '$http'];
+ChartCtrl.$inject = ['$scope', '$http', '$cookieStore'];

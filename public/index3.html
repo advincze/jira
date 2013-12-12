@@ -1,199 +1,94 @@
-<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01//EN" "http://www.w3.org/TR/html4/strict.dtd">
-<html>
-<head>
-	<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
-	<title>Burndown Chart - RC-5.32 EX Magic Wombats</title>
-	<link href="/examples/examples.css" rel="stylesheet" type="text/css">
-	<link href="/bootstrap/css/bootstrap.min.css" rel="stylesheet">
-	<!--[if lte IE 8]><script language="javascript" type="text/javascript" src="/js/excanvas.min.js"></script><![endif]-->
-	<!-- <script language="javascript" type="text/javascript" src="/js/jquery.js"></script> -->
-	<script src="https://code.jquery.com/jquery-1.10.2.min.js"></script>
-	<script src="/bootstrap/js/bootstrap.js"></script>
-	<script language="javascript" type="text/javascript" src="/jquery.flot.js"></script>
+<!DOCTYPE html>
+<html ng-app="jiraApp">
+  <head>
+    <title>Bootstrap 101 Template</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <!-- Bootstrap -->
+    <link href="css/bootstrap.min.css" rel="stylesheet">
+    <link href="css/app.css" rel="stylesheet">
 
-	<script language="javascript" type="text/javascript" src="/jquery.flot.time.js"></script>
-	<script language="javascript" type="text/javascript" src="/jquery.flot.selection.js"></script>
-	
+    <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
+    <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
+    <!--[if lt IE 9]>
+      <script src="https://oss.maxcdn.com/libs/html5shiv/3.7.0/html5shiv.js"></script>
+      <script src="https://oss.maxcdn.com/libs/respond.js/1.3.0/respond.min.js"></script>
+    <![endif]-->
+  </head>
+  <body ng-controller="ChartCtrl">
+    
+     <div class="container">
+        
 
+        <div class="well">
+          
+          <h2 id="title">Burdown {{sprint.Name}} {{filter.name}}</h2>
+          
+          <div class="tools" style="display:none;">
+                  <select class="span4" ng-model="board" ng-options="b.Name for b in boards" ng-change="boardChanged()"></select>
+        <select class="span4" ng-model="sprint" ng-options="s.Name for s in sprints" ng-change="sprintChanged()" ></select>
+        <select class="span4" ng-model="filter" ng-options="f.name for f in filters" ng-change="refreshChart()" ></select>
+        </div>
+        </div>
+        
+        
 
-	<script type="text/javascript">
+        <div class="well demo-container"> 
+          <div id="placeholder" class="demo-placeholder" ng-model="chart.data" chart></div>
+        </div>
+        
+        
+      
+    </div> <!-- /container -->
 
-	$(function() {
+    
+    
 
-		var dayMillies = 60 * 60 * 24 *1000;
+    <!-- jQuery (necessary for Bootstrap's JavaScript plugins) -->
+   <script src="js/jquery-1.10.2.min.js"></script>
+  <script src="js/jquery.flot.min.js"></script>
+  <script src="js/jquery.flot.time.min.js"></script>
+  <script src="js/jquery.flot.selection.min.js"></script>
+  <script src="js/bootstrap.min.js"></script>
+  <script src="lib/angular/angular.js"></script>
+  <script src="//ajax.googleapis.com/ajax/libs/angularjs/1.2.4/angular-cookies.js"></script>
+  <script src="js/app.js"></script>
+  <script src="js/services.js"></script>
+  <script src="js/controllers.js"></script>
+  <script src="js/directives.js"></script>
+    <script type="text/javascript">
 
-		function weekendAreas(axes) {
+  $(function() {
 
-			var markings = [],
-				d = new Date(axes.xaxis.min);
+    var d1 = [];
+    for (var i = 0; i < 14; i += 0.5) {
+      d1.push([i, Math.sin(i)]);
+    }
 
-			// go to the first Saturday
+    var d2 = [[0, 3], [4, 8], [8, 5], [9, 13]];
 
-			d.setUTCDate(d.getUTCDate() - ((d.getUTCDay() + 1) % 7))
-			d.setUTCSeconds(0);
-			d.setUTCMinutes(0);
-			d.setUTCHours(0);
+    // A null signifies separate line segments
 
-			var i = d.getTime();
+    var d3 = [[0, 12], [7, 12], null, [7, 2.5], [12, 2.5]];
 
-			// when we don't set yaxis, the rectangle automatically
-			// extends to infinity upwards and downwards
+    
 
-			do {
-				markings.push({ 
-					color: '#ccddcc',
-					xaxis: { 
-						from: i, 
-						to: i + 2 * 24 * 60 * 60 * 1000 
-					} 
-				});
-				i += 7 * 24 * 60 * 60 * 1000;
-			} while (i < axes.xaxis.max);
+    function refreshChart(){
+      $(".demo-container").show();
+      $.plot("#placeholder", [ d1, d2, d3 ]);  
+    }
 
-			return markings;
-		}
+    // Add the Flot version string to the footer
 
-		function isWeekend(d){
-			return (d.getDay()%6)==0 ;
-		}
-
-		function countWeekendDays(from, to){
-			var cnt = 0;
-			for (var i = from; i < to; i += dayMillies ) {
-				if (isWeekend(new Date(i))){
-					cnt+=1;
-				}
-			}
-			return cnt;
-		}
-
-		var options = {
-			xaxis: {
-				mode: "time",
-				tickLength: 5
-			},
-			grid: {
-				markings: weekendAreas
-			}
-		};
-
-		$.ajax({
-			dataType: "json",
-			url: "/burndown",
-			success: function(dt){
-
-				var sumdata = dt.Sumdata;
-				var burndown = dt.Burndown;
-				var idealData = [];
-				var days = sumdata.length;
-				var weekDays = days-countWeekendDays(sumdata[0][0], sumdata[sumdata.length-1][0]);
-				
-				var val = sumdata[0][1];
-				var delta = val/(weekDays-1); 
-				for (var i = 0; i < days; i++) {
-				 	var idx = sumdata[i][0];
-				 	// var sum = sumdata[i][1];
-				 	idealData.push([idx, val]);
-				 	if(!isWeekend(new Date(idx))){
-				 		val -= delta;	
-				 	}
-				};
-
-			  	var data = [{
-					label: "sum",
-					data: sumdata,
-					bars: { show: true,
-							barWidth: dayMillies/2,
-							align: "left" }
-					}, {
-						label: "ideal",
-						data: idealData,
-						lines: { show: true }
-					}, {
-						label: "burdown",
-						data: burndown,
-						lines: { show: true },
-						points: { show: true }
-					}
-				];
-
-				$.plot("#placeholder", data, options);
-			}
-		});
-
-		// Add the Flot version string to the footer
-
-		$("#footer").prepend("Flot " + $.plot.version + " &ndash; ");
-		//$("#settings").hide();
-		$("#header").click(function(){
-			$("#settings").slideToggle();
-		});
-	});
-
-	</script>
-</head>
-<body>
-
-	<div id="header">
-		<h2>Burndown - RC-5.33 EX Magic Wombats</h2>
-	</div>
-
-	<div id="content">
-
-		<div class="demo-container">
-			<div id="placeholder" class="demo-placeholder"></div>
-		</div>
-
-		<div id="settings">
-			<div class="btn-group">
-			  <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown">
-			    Sprint <span class="caret"></span>
-			  </button>
-			  <ul class="dropdown-menu" role="menu">
-			    <li><a href="#">RC-5.32</a></li>
-			    <li><a href="#">RC-5.33</a></li>
-			  </ul>
-			</div>
-			<div class="btn-group">
-		        <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown">
-		        Team <span class="caret"></span></button>
-		        <ul class="dropdown-menu" role="menu">
-		        	<li><a href="#">EX-Magic Wombats</a></li>
-		          	<li><a href="#">A-Team</a></li>
-		        </ul>
-		      </div>
-			<!-- <form>
-				<table>
-					<tr>
-						<td>team:</td>
-						<td>
-							<select name="team" >
-						      <option value="DieWildenKerle">A-Team</option>
-						      <option value="MagicWombats">EX-MagicWombats</option>
-						    </select>
-						</td>
-						<td>Sprint:</td>
-						<td>
-							<select name="sprint" >
-						      <option value="RC-5.32">RC-5.32</option>
-						      <option value="RC-5.33">RC-5.33</option>
-						    </select>
-						</td>
-				    	<td>
-				    		<input type="button" value="submit" id="submit">
-				    	</td>
-					</tr>
-				</table>
-			</form> -->
-		</div>
-
-	</div>
+    $("#footer").prepend("Flot " + $.plot.version + " &ndash; ");
+    
+    $("#title").click(function(){
+      $(".tools").toggle();
+    });
 
 
 
-	<div id="footer">
-		Copyright &copy; 2007 - 2013 IOLA and Ole Laursen
-	</div>
+  });
 
-</body>
+  </script>
+  </body>
 </html>

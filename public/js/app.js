@@ -1,3 +1,3 @@
 'use strict';
 
-angular.module('jiraApp', [ 'jiraApp.services', 'jiraApp.directives']);
+angular.module('jiraApp', [ 'jiraApp.services', 'jiraApp.directives', 'ngCookies']);

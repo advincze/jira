@@ -1,8 +1,6 @@
+boards := jira.FetchBoardNames(boardId int) []*jira.Board
 
-
-
-
-jira.FetchBoardById(boardId int) *jira.Board
+board := jira.FetchBoardById(boardId int) *jira.Board
 board := jira.FetchBoardByName(boardName string) *jira.Board
 
 board.Id int

@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"flag"
 	"github.com/advincze/jira-client/jira"
-	"log"
 	"net/http"
 	"os/exec"
 	"runtime"
@@ -13,8 +12,6 @@ import (
 
 var port = flag.String("port", "8080", "webserver port")
 var openBrowser = flag.Bool("o", false, "open browser at startup")
-var testMode = flag.Bool("t", false, "start in test mode")
-var cacheMode = flag.Bool("c", false, "cache requests")
 
 func main() {
 
@@ -23,8 +20,6 @@ func main() {
 	if *openBrowser {
 		startBrowser("http://localhost:" + *port + "/")
 	}
-	jira.SetTest(*testMode)
-	jira.SetCache(*cacheMode)
 
 	http.Handle("/", http.StripPrefix("/", http.FileServer(http.Dir("public"))))
 	http.HandleFunc("/data/burndown", burndownHandler)
@@ -34,9 +29,9 @@ func main() {
 
 }
 
-const BOARD_ID = "boardId"
-const SPRINT_ID = "sprintId"
-const FILTER_LABEL = "filter"
+const BOARD_ID = "board"
+const SPRINT_ID = "sprint"
+const FILTER_LABEL = "team"
 
 func burndownHandler(w http.ResponseWriter, r *http.Request) {
 	boardId, err := strconv.Atoi(r.FormValue(BOARD_ID))
@@ -45,29 +40,16 @@ func burndownHandler(w http.ResponseWriter, r *http.Request) {
 	sprintId, err := strconv.Atoi(r.FormValue(SPRINT_ID))
 	panicerr(err)
 
-	sprint := jira.GetSprintById(boardId, sprintId)
-	issues := sprint.Issues
+	filter := r.FormValue(FILTER_LABEL)
 
-	log.Printf("%d issues fetched\n", len(issues))
-
-	if filterLabel := r.FormValue(FILTER_LABEL); filterLabel != "" {
-		issues = issues.FilterByLabel(filterLabel)
-	}
-
-	log.Printf("%d issues remain after filtering\n", len(issues))
-	for _, issue := range issues {
-		log.Printf("issue: %s cost: %d\n", issue.Key, issue.EffortInSeconds/3600)
-	}
-
-	burndown := jira.CreateBurndown(sprint, issues)
+	burndown := jira.GetBurndown(boardId, sprintId, filter)
 
 	bytes, _ := json.MarshalIndent(burndown, "", " ")
 	w.Write(bytes)
 }
 
 func boardsHandler(w http.ResponseWriter, r *http.Request) {
-	boards := jira.GetBoards()
-
+	boards := jira.FetchBoards()
 	bytes, _ := json.MarshalIndent(boards, "", " ")
 	w.Write(bytes)
 }
@@ -75,9 +57,10 @@ func boardsHandler(w http.ResponseWriter, r *http.Request) {
 func sprintsHandler(w http.ResponseWriter, r *http.Request) {
 	boardId, err := strconv.Atoi(r.FormValue(BOARD_ID))
 	panicerr(err)
-	board := jira.GetBoardById(boardId)
 
-	bytes, _ := json.MarshalIndent(board.Sprints, "", " ")
+	sprints := jira.FetchSprints(boardId)
+
+	bytes, _ := json.MarshalIndent(sprints, "", " ")
 	w.Write(bytes)
 }
 

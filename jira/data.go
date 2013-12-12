@@ -64,42 +64,20 @@ type SprintDetailsResponse struct {
 
 type SearchResult struct {
 	Expand string
-	// StartAt    int
-	// MaxResults int
-	// Total      int
 	Issues []struct {
-		Id  string
-		Key string
-		// StatusId   string
-		// StatusName string
-		// Expand     string
+		Id     string
+		Key    string
 		Fields struct {
-			// Summary     string
-			// Description string
-			// Updated     string
-			Created string
-			// status      struct {
-			// Name string
-			// }
+			Created   string
 			Issuetype struct {
-				// Self        string
-				// Id          string
-				// Description string
-				// IconUrl     string
 				Name string
-				// Subtask     bool
 			}
-			// Priority struct {
-			// Name string
-			// }
-			// Aggregatetimeestimate int
 			Labels       []string
 			Timetracking struct {
 				OriginalEstimateSeconds int
 			}
 		}
 		Changelog struct {
-			// StartAt   int
 			Histories []History
 		}
 	}

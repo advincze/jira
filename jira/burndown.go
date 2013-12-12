@@ -20,7 +20,11 @@ type TimelineElement struct {
 
 const secondsInHour = 3600
 
-func CreateBurndown(sprint *Sprint, issues []*Issue) *Burndown {
+func createBurndownFromSprint(sprintDetails *SprintDetails) *Burndown {
+	return createBurndown(sprintDetails.Start, sprintDetails.End, sprintDetails.Issues)
+}
+
+func createBurndown(start, end time.Time, issues []*Issue) *Burndown {
 
 	timeline := make([]*TimelineElement, 0, len(issues)*4)
 
@@ -52,8 +56,8 @@ func CreateBurndown(sprint *Sprint, issues []*Issue) *Burndown {
 	}
 
 	return &Burndown{
-		SprintStart: sprint.Start,
-		SprintEnd:   sprint.End,
+		SprintStart: start,
+		SprintEnd:   end,
 		Timeline:    timeline,
 	}
 }
