@@ -10,11 +10,8 @@ body {
 .demo-container {
 	box-sizing: border-box;
 	width:100%;
-	height:100%;
-	/*width: 850px;*/
-	height: 550px;
+	height: 600px;
 	padding: 20px 15px 15px 15px;
-	/*margin: 15px auto 30px auto;*/
 	border: 1px solid #ddd;
 	background: #fff;
 	background: linear-gradient(#f6f6f6 0, #fff 50px);

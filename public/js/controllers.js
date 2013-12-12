@@ -4,16 +4,9 @@
 
 function ChartCtrl($scope, $http, $cookieStore) {
 
-    $scope.error = {
-        msg: ""
-    };
-    $scope.messages = [];
-
-    $scope.boardId = 51;
-    $scope.sprintId = 217;
 
     $scope.filters = [
-        {name:"both teams", value:""},
+        {name:"", value:""},
         {name:"MagicWombats", value:"&team=MagicWombats"},
         {name:"ATeam", value:"&team=ATeam"}, 
     ];
@@ -51,7 +44,7 @@ function ChartCtrl($scope, $http, $cookieStore) {
 
 
     $scope.boards = [];
-    $scope.board = $cookieStore.get("board");
+    $scope.board = {};
     if ($cookieStore.get("board")!=undefined) {
         $scope.board =$cookieStore.get("board");
     }
@@ -73,7 +66,7 @@ function ChartCtrl($scope, $http, $cookieStore) {
     }
 
     $scope.sprints = [];
-    $scope.sprint = $cookieStore.get("sprint");
+    $scope.sprint = {};
     if ($cookieStore.get("sprint")!=undefined) {
         $scope.sprint =$cookieStore.get("sprint");
     }
