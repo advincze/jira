@@ -256,9 +256,10 @@ func (jc *JiraClient) fetchJson(endpointUrl string, object interface{}) {
 }
 
 func gethashFileNameForUrl(url string) string {
+	t0 := time.Now()
 	h := sha1.New()
+	io.WriteString(h, fmt.Sprintf("%d-%d:%d", t0.YearDay, t0.Hour(), t0.Minute()/12))
 	io.WriteString(h, url)
-
 	return fmt.Sprintf(".cache/%x", h.Sum(nil))
 }
 

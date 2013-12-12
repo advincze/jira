@@ -29,18 +29,14 @@ func main() {
 
 }
 
-const BOARD_ID = "board"
-const SPRINT_ID = "sprint"
-const FILTER_LABEL = "team"
-
 func burndownHandler(w http.ResponseWriter, r *http.Request) {
-	boardId, err := strconv.Atoi(r.FormValue(BOARD_ID))
+	boardId, err := strconv.Atoi(r.FormValue("board"))
 	panicerr(err)
 
-	sprintId, err := strconv.Atoi(r.FormValue(SPRINT_ID))
+	sprintId, err := strconv.Atoi(r.FormValue("sprint"))
 	panicerr(err)
 
-	filter := r.FormValue(FILTER_LABEL)
+	filter := r.FormValue("team")
 
 	burndown := jira.GetBurndown(boardId, sprintId, filter)
 
@@ -55,7 +51,7 @@ func boardsHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func sprintsHandler(w http.ResponseWriter, r *http.Request) {
-	boardId, err := strconv.Atoi(r.FormValue(BOARD_ID))
+	boardId, err := strconv.Atoi(r.FormValue("board"))
 	panicerr(err)
 
 	sprints := jira.FetchSprints(boardId)
