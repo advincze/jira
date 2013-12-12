@@ -4,7 +4,6 @@
 
 function ChartCtrl($scope, $http, $cookieStore) {
 
-
     $scope.filters = [
         {name:"", value:""},
         {name:"MagicWombats", value:"&team=MagicWombats"},
