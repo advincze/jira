@@ -1,6 +1,11 @@
 body {
-	padding-top: 20px;
+  padding-top: 80px;
 }
+.starter-template {
+  padding: 40px 15px;
+  text-align: center;
+}
+
 
 .well {
    background-color: rgba(245, 245, 245, 0.4);

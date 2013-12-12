@@ -2,7 +2,7 @@
 
 /* Controllers */
 
-function ChartCtrl($scope, $http, $cookieStore) {
+function BurndownCtrl($scope, $http, $cookieStore) {
 
     $scope.filters = [
         {name:"", value:""},
@@ -17,8 +17,8 @@ function ChartCtrl($scope, $http, $cookieStore) {
     var dayMillies = 60 * 60 * 24 * 1000;
 
     $scope.counter = 3;
-    $scope.chart = {}
-    $scope.chart.data = [{
+    $scope.chart = {
+        data: [{
         label: "total",
         data: [],
         bars: {
@@ -38,7 +38,7 @@ function ChartCtrl($scope, $http, $cookieStore) {
         lines: {
             show: true
         }
-    }];
+    }]};
 
 
 
