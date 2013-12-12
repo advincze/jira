@@ -75,7 +75,7 @@ type SprintDetails struct {
 	Sprint
 	Start  time.Time
 	End    time.Time
-	Issues []*Issue
+	Issues Issues
 }
 
 func (jc *JiraClient) FetchSprintDetails(boardId, sprintId int) *SprintDetails {
