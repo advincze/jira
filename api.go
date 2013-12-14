@@ -1,5 +1,9 @@
 package jira
 
+import (
+	"time"
+)
+
 var defaultClient *JiraClient
 
 func init() {
@@ -16,4 +20,8 @@ func FetchSprints(boardId int) []*Sprint {
 
 func FetchSprintDetails(boardId, sprintId int) *SprintDetails {
 	return defaultClient.FetchSprintDetails(boardId, sprintId)
+}
+
+func SetCachingDuration(duration time.Duration) {
+	cachingTime = duration
 }

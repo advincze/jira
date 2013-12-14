@@ -13,6 +13,8 @@ import (
 	"time"
 )
 
+var cachingTime time.Duration = 3 * time.Minute
+
 type JiraClient struct {
 	client *http.Client
 	config *Config
@@ -256,12 +258,12 @@ func (jc *JiraClient) fetchJson(endpointUrl string, object interface{}) {
 }
 
 func gethashFileNameForUrl(url string) string {
-	t0 := time.Now()
 	h := sha1.New()
-	io.WriteString(h, fmt.Sprintf("%d-%d:%d", t0.YearDay, t0.Hour(), t0.Minute()/12))
 	io.WriteString(h, url)
 	return fmt.Sprintf(".cache/%x", h.Sum(nil))
 }
+
+var cachedFiles = make(map[string]time.Time)
 
 func (jc *JiraClient) fetchJiraGetRequest(url string) []byte {
 
@@ -270,8 +272,8 @@ func (jc *JiraClient) fetchJiraGetRequest(url string) []byte {
 	fileName := gethashFileNameForUrl(url)
 	log.Printf("cachefile %s \n", fileName)
 
-	if _, err := os.Stat(fileName); err == nil {
-
+	t0 := time.Now().Add(-1 * cachingTime)
+	if cachetime, ok := cachedFiles[fileName]; ok && cachetime.After(t0) {
 		bytes, err := ioutil.ReadFile(fileName)
 		panicerr(err)
 		return bytes
@@ -292,7 +294,28 @@ func (jc *JiraClient) fetchJiraGetRequest(url string) []byte {
 	err = ioutil.WriteFile(fileName, body, 0644)
 	panicerr(err)
 
+	cachedFiles[fileName] = time.Now()
+	log.Printf("adding file %s to cache \n", fileName)
+	deleteOutdatedFiles()
+
 	return body
+}
+
+func deleteOutdatedFiles() {
+	fileinfos, err := ioutil.ReadDir(".cache")
+	panicerr(err)
+	t := time.Now().Add(-1 * cachingTime)
+	for _, fi := range fileinfos {
+		filename := ".cache/" + fi.Name()
+		if cachetime, ok := cachedFiles[filename]; !ok {
+			log.Printf("deleting file not found in cache: %s\n", filename)
+			os.Remove(filename)
+		} else if cachetime.Before(t) {
+			log.Printf("deleting file outdated: %s, cachetime: %v \n", filename, cachetime)
+			os.Remove(filename)
+			delete(cachedFiles, filename)
+		}
+	}
 }
 
 func panicerr(err error) {
