@@ -1,15 +1,12 @@
 package jira
 
 import (
-	"crypto/sha1"
 	"encoding/json"
 	"fmt"
-	"io"
 	"io/ioutil"
 	"log"
 	"net/http"
 	"net/url"
-	"os"
 	"time"
 )
 
@@ -257,14 +254,6 @@ func (jc *JiraClient) fetchJson(endpointUrl string, object interface{}) {
 	panicerr(err)
 }
 
-func gethashFileNameForUrl(url string) string {
-	h := sha1.New()
-	io.WriteString(h, url)
-	return fmt.Sprintf(".cache/%x", h.Sum(nil))
-}
-
-var cachedFiles = make(map[string]time.Time)
-
 func (jc *JiraClient) fetchJiraGetRequest(url string) []byte {
 
 	log.Printf("fetching url: [%s]\n", url)
@@ -285,23 +274,6 @@ func (jc *JiraClient) fetchJiraGetRequest(url string) []byte {
 		return body
 	}).([]byte)
 
-}
-
-func deleteOutdatedFiles() {
-	fileinfos, err := ioutil.ReadDir(".cache")
-	panicerr(err)
-	t := time.Now().Add(-1 * cachingTime)
-	for _, fi := range fileinfos {
-		filename := ".cache/" + fi.Name()
-		if cachetime, ok := cachedFiles[filename]; !ok {
-			log.Printf("deleting file not found in cache: %s\n", filename)
-			os.Remove(filename)
-		} else if cachetime.Before(t) {
-			log.Printf("deleting file outdated: %s, cachetime: %v \n", filename, cachetime)
-			os.Remove(filename)
-			delete(cachedFiles, filename)
-		}
-	}
 }
 
 func panicerr(err error) {
