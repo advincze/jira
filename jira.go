@@ -269,36 +269,22 @@ func (jc *JiraClient) fetchJiraGetRequest(url string) []byte {
 
 	log.Printf("fetching url: [%s]\n", url)
 
-	fileName := gethashFileNameForUrl(url)
-	log.Printf("cachefile %s \n", fileName)
-
-	t0 := time.Now().Add(-1 * cachingTime)
-	if cachetime, ok := cachedFiles[fileName]; ok && cachetime.After(t0) {
-		bytes, err := ioutil.ReadFile(fileName)
+	return defaultCache.getOrRunCacheAndReturn(cachingTime, url, func() interface{} {
+		req, err := http.NewRequest("GET", url, nil)
 		panicerr(err)
-		return bytes
-	}
+		req.SetBasicAuth(jc.config.Auth.Login, jc.config.Auth.Password)
 
-	req, err := http.NewRequest("GET", url, nil)
-	panicerr(err)
-	req.SetBasicAuth(jc.config.Auth.Login, jc.config.Auth.Password)
+		resp, err := jc.client.Do(req)
+		panicerr(err)
+		log.Printf("responded url: [%s]\n", url)
 
-	resp, err := jc.client.Do(req)
-	panicerr(err)
+		body, err := ioutil.ReadAll(resp.Body)
+		panicerr(err)
 
-	body, err := ioutil.ReadAll(resp.Body)
-	panicerr(err)
+		log.Printf("url: [%s] body read\n", url)
+		return body
+	}).([]byte)
 
-	os.Mkdir(".cache", 0777)
-
-	err = ioutil.WriteFile(fileName, body, 0644)
-	panicerr(err)
-
-	cachedFiles[fileName] = time.Now()
-	log.Printf("adding file %s to cache \n", fileName)
-	deleteOutdatedFiles()
-
-	return body
 }
 
 func deleteOutdatedFiles() {
