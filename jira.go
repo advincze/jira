@@ -101,10 +101,9 @@ func (jc *JiraClient) FetchSprintDetails(boardId, sprintId int) *SprintDetails {
 
 		}
 		issue := &Issue{
-			Id:  foundIssue.Id,
-			Key: foundIssue.Key,
-			//TODO issue type
-			// Type                    :foundIssue.
+			Id:                      foundIssue.Id,
+			Key:                     foundIssue.Key,
+			Type:                    foundIssue.Fields.Issuetype.Name,
 			Labels:                  foundIssue.Fields.Labels,
 			OriginalEstimateSeconds: foundIssue.Fields.Timetracking.OriginalEstimateSeconds,
 			Changes:                 changes,
@@ -119,7 +118,7 @@ func (jc *JiraClient) FetchSprintDetails(boardId, sprintId int) *SprintDetails {
 		},
 		Start:  start,
 		End:    end,
-		Issues: issues,
+		Issues: Issues(issues),
 	}
 
 }
@@ -134,6 +133,34 @@ type Issue struct {
 }
 
 type Issues []*Issue
+
+func (issues Issues) Filter(fn func(*Issue) bool) Issues {
+	filteredIssues := make([]*Issue, 0, len(issues))
+	for _, issue := range issues {
+		if fn(issue) {
+			filteredIssues = append(filteredIssues, issue)
+		}
+	}
+	return Issues(filteredIssues)
+}
+
+func (issues Issues) FilterByType(issueType string) Issues {
+	return issues.Filter(func(issue *Issue) bool {
+		return issue.Type == issueType
+	})
+}
+
+func (issues Issues) FilterByLabel2(labelToSearch string) Issues {
+	return issues.Filter(func(issue *Issue) (containsLabel bool) {
+		for _, labelFound := range issue.Labels {
+			if labelFound == labelToSearch {
+				containsLabel = true
+				break
+			}
+		}
+		return
+	})
+}
 
 func (issues Issues) FilterByLabel(labelToSearch string) Issues {
 	filteredIssues := make([]*Issue, 0, len(issues))
