@@ -19,11 +19,3 @@ func LoadConfig(fileName string) (config *Config) {
 	panicerr(err)
 	return
 }
-
-func (c *Config) writeConfig(fileName string) {
-	bytes, err := goyaml.Marshal(c)
-	panicerr(err)
-
-	err = ioutil.WriteFile(fileName, bytes, 0777)
-	panicerr(err)
-}

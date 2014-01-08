@@ -4,13 +4,14 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
-	"log"
 	"net/http"
 	"net/url"
 	"time"
 )
 
-var cachingTime time.Duration = 3 * time.Minute
+const maxFetchedIssues = 1000
+
+var cachingTime = 3 * time.Minute
 
 type JiraClient struct {
 	client *http.Client
@@ -23,15 +24,11 @@ type Auth struct {
 }
 
 func NewJira(config *Config) *JiraClient {
-	return &JiraClient{
+	jira := &JiraClient{
 		client: &http.Client{},
 		config: config,
 	}
-}
-
-func NewJiraFromFile(configFile string) *JiraClient {
-	config := LoadConfig(configFile)
-	return NewJira(config)
+	return jira
 }
 
 type Board struct {
@@ -123,115 +120,6 @@ func (jc *JiraClient) FetchSprintDetails(boardId, sprintId int) *SprintDetails {
 
 }
 
-type Issue struct {
-	Id                      string
-	Key                     string
-	Type                    string
-	OriginalEstimateSeconds int
-	Labels                  []string
-	Changes                 []*Change
-}
-
-type Issues []*Issue
-
-func (issues Issues) Filter(fn func(*Issue) bool) Issues {
-	filteredIssues := make([]*Issue, 0, len(issues))
-	for _, issue := range issues {
-		if fn(issue) {
-			filteredIssues = append(filteredIssues, issue)
-		}
-	}
-	return Issues(filteredIssues)
-}
-
-func (issues Issues) FilterByType(issueType string) Issues {
-	return issues.Filter(func(issue *Issue) bool {
-		return issue.Type == issueType
-	})
-}
-
-func (issues Issues) FilterByLabel2(labelToSearch string) Issues {
-	return issues.Filter(func(issue *Issue) (containsLabel bool) {
-		for _, labelFound := range issue.Labels {
-			if labelFound == labelToSearch {
-				containsLabel = true
-				break
-			}
-		}
-		return
-	})
-}
-
-func (issues Issues) FilterByLabel(labelToSearch string) Issues {
-	filteredIssues := make([]*Issue, 0, len(issues))
-	for _, issue := range issues {
-		var containsLabel bool
-		for _, labelFound := range issue.Labels {
-			if labelFound == labelToSearch {
-				containsLabel = true
-				break
-			}
-		}
-		if containsLabel {
-			filteredIssues = append(filteredIssues, issue)
-		}
-	}
-	return Issues(filteredIssues)
-}
-
-type Change struct {
-	Timestamp time.Time
-	Field     string
-	From      string
-	To        string
-}
-
-func (c *Change) issueClosed() bool {
-
-	if c.Field == "status" {
-		switch c.From {
-		case "Open":
-			break
-		case "Planung":
-			break
-		case "In Progress":
-			break
-		case "Geschlossen":
-			return false
-		}
-
-		switch c.To {
-		case "Open":
-			break
-		case "Planung":
-			break
-		case "In Progress":
-			break
-		case "Geschlossen":
-
-			return true
-		}
-
-	}
-	return false
-}
-
-func (jc *JiraClient) FetchBoardNames() []string {
-	rapidViewsResponse := jc.fetchRapidViews()
-	return rapidViewsResponse.getRapidViewNames()
-}
-
-func (jc *JiraClient) FetchBoardByName(boardName string) *Board {
-	rapidViewsResponse := jc.fetchRapidViews()
-	if boardId, ok := rapidViewsResponse.getBoardId(boardName); ok {
-		return &Board{
-			Id:   boardId,
-			Name: boardName,
-		}
-	}
-	return nil
-}
-
 const (
 	rapidViewsEndpoint    = "/rest/greenhopper/1.0/rapidview"
 	sprintsEndpoint       = "/rest/greenhopper/1.0/sprintquery/%d"
@@ -258,8 +146,7 @@ func (jc *JiraClient) fetchSprintIssues(sprintId int) (searchResult *SearchResul
 	jql := fmt.Sprintf("Sprint=%d", sprintId)
 	fields := "*all"
 	expand := "changelog"
-	//TODO 1000 is a magic number
-	return jc.fetchSearchResult(jql, fields, expand, 1000)
+	return jc.fetchSearchResult(jql, fields, expand, maxFetchedIssues)
 }
 
 func (jc *JiraClient) fetchSearchResult(jql, fields, expand string, maxSearchResults int) (searchResult *SearchResult) {
@@ -281,9 +168,7 @@ func (jc *JiraClient) fetchJson(endpointUrl string, object interface{}) {
 	panicerr(err)
 }
 
-func (jc *JiraClient) fetchJiraGetRequest(url string) []byte {
-
-	log.Printf("fetching url: [%s]\n", url)
+var jiraGetRequestFetcher = func(jc *JiraClient, url string) []byte {
 
 	return defaultCache.getOrRunCacheAndReturn(cachingTime, url, func() interface{} {
 		req, err := http.NewRequest("GET", url, nil)
@@ -292,15 +177,16 @@ func (jc *JiraClient) fetchJiraGetRequest(url string) []byte {
 
 		resp, err := jc.client.Do(req)
 		panicerr(err)
-		log.Printf("responded url: [%s]\n", url)
 
 		body, err := ioutil.ReadAll(resp.Body)
 		panicerr(err)
 
-		log.Printf("url: [%s] body read\n", url)
 		return body
 	}).([]byte)
+}
 
+func (jc *JiraClient) fetchJiraGetRequest(url string) []byte {
+	return jiraGetRequestFetcher(jc, url)
 }
 
 func panicerr(err error) {

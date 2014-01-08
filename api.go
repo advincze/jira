@@ -6,8 +6,8 @@ import (
 
 var defaultClient *JiraClient
 
-func init() {
-	defaultClient = NewJiraFromFile("jira.yaml")
+func SetConfig(config *Config) {
+	defaultClient = NewJira(config)
 }
 
 func FetchBoards() []*Board {
