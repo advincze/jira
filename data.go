@@ -68,6 +68,7 @@ type SearchResult struct {
 		Id     string
 		Key    string
 		Fields struct {
+			Summary   string
 			Created   string
 			Issuetype struct {
 				Name string

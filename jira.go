@@ -100,6 +100,7 @@ func (jc *JiraClient) FetchSprintDetails(boardId, sprintId int) *SprintDetails {
 		issue := &Issue{
 			Id:                      foundIssue.Id,
 			Key:                     foundIssue.Key,
+			Title:                   foundIssue.Fields.Summary,
 			Type:                    foundIssue.Fields.Issuetype.Name,
 			Labels:                  foundIssue.Fields.Labels,
 			OriginalEstimateSeconds: foundIssue.Fields.Timetracking.OriginalEstimateSeconds,

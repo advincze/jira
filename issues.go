@@ -4,6 +4,7 @@ import "time"
 
 type Issue struct {
 	Id                      string
+	Title                   string
 	Key                     string
 	Type                    string
 	OriginalEstimateSeconds int
